@@ -1,0 +1,1720 @@
+From 0c5f81fe2f9c74bb7174e3cf70bb595fc4728047 Mon Sep 17 00:00:00 2001
+From: FoxYang12 <foxyang@aaeon.com.tw>
+Date: Wed, 22 Apr 2026 14:37:31 +0800
+Subject: [PATCH] kernel
+
+---
+ arch/arm64/boot/dts/qcom/qcm6490.dtsi         |   5 +-
+ .../qcom/qcs6490-addons-rb3gen2-ia-mezz.dts   | 191 ++++++++++++++--
+ .../boot/dts/qcom/qcs6490-addons-rb3gen2.dtsi |  49 ++--
+ arch/arm64/boot/dts/qcom/qcs6490-rb3gen2.dts  | 213 +++++++++++++++---
+ arch/arm64/boot/dts/qcom/sc7280.dtsi          |  28 ++-
+ arch/arm64/configs/qcom_defconfig             | 204 ++++++++++-------
+ 6 files changed, 533 insertions(+), 157 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/qcm6490.dtsi b/arch/arm64/boot/dts/qcom/qcm6490.dtsi
+index bac8bc4af172..9ee642acb29a 100644
+--- a/arch/arm64/boot/dts/qcom/qcm6490.dtsi
++++ b/arch/arm64/boot/dts/qcom/qcm6490.dtsi
+@@ -23,7 +23,7 @@ scm {
+ 	psci {
+ 		mode-bootloader = <0x10001 0x2>;
+ 		mode-edl = <0 0x1>;
+-	};
++	}; 
+ 
+ 	reboot-mode {
+ 		status = "disabled";
+@@ -597,7 +597,8 @@ &swr2 {
+ };
+ 
+ &tlmm {
+-	gpio-reserved-ranges = <32 2>, <48 4>;
++	//gpio-reserved-ranges = <32 2>, <48 4>; //20260223
++    gpio-reserved-ranges = <32 2>; //20260223
+ };
+ 
+ &video_mem {
+diff --git a/arch/arm64/boot/dts/qcom/qcs6490-addons-rb3gen2-ia-mezz.dts b/arch/arm64/boot/dts/qcom/qcs6490-addons-rb3gen2-ia-mezz.dts
+index fd820f055f53..711bc81b2da4 100644
+--- a/arch/arm64/boot/dts/qcom/qcs6490-addons-rb3gen2-ia-mezz.dts
++++ b/arch/arm64/boot/dts/qcom/qcs6490-addons-rb3gen2-ia-mezz.dts
+@@ -17,8 +17,9 @@ / {
+ 	qcom,board-id = <32 0x9>, <32 0x609>;
+ 
+ 	aliases {
+-		hsuart0 = &uart4;
+-	};
++		//hsuart0 = &uart4; //20260223
++		rtc0 = &pcf85063; //20260319
++	}; 
+ 
+ 	wcd9375: audio-codec-0 {
+ 		compatible = "qcom,wcd9370-codec";
+@@ -35,7 +36,25 @@ wcd9375: audio-codec-0 {
+ 		qcom,ground-jack-type-normally-closed = <1>;
+ 		qcom,always-on-supply;
+ 		#sound-dai-cells = <1>;
+-	};
++        status = "disabled"; //0309 + elyse
++    };
++
++	//20260312---
++	dp_connector: dp-connector {
++    	compatible = "dp-connector";
++   	label = "DP";
++    	type = "full-size";
++	
++//    	hpd-gpios = <&tlmm 104 GPIO_ACTIVE_LOW>;
++    	hpd-gpios = <&tlmm 24 GPIO_ACTIVE_HIGH>; // ÚÌ? GPIO 104 ¬Oµw¥ó HPD ¤Þ?
++
++    	port {
++        	dp_connector_in: endpoint {
++            	remote-endpoint = <&mdss_dp_out>;
++        		};
++    		};
++	};
++	//---20260312
+ 
+ 	hdmi-connector {
+ 		status = "disabled";
+@@ -49,7 +68,8 @@ panel_lvds: panel-lvds@0 {
+ 		width-mm = <476>;
+ 		height-mm = <268>;
+ 
+-		status = "okay";
++		//status = "okay"; //20260312
++        status = "disabled"; //20260312
+ 
+ 		panel-timing {
+ 			clock-frequency = <148500000>;
+@@ -97,12 +117,14 @@ qps615_rc0_resx_vreg: qps615-rc0-resx-vreg {
+ 		regulator-max-microvolt = <1800000>;
+ 		enable-active-high;
+ 		regulator-enable-ramp-delay = <10000>;
++        status = "disabled"; //0309
+ 	};
+ 
+ 	qps615_rc1_resx_vreg: qps615-rc1-resx-vreg {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "qps615_rc1_resx_vreg";
+-		gpio = <&tlmm 124 0>;
++		//gpio = <&tlmm 124 0>; //0309
++        gpio = <&pm8350c_gpios 1 0>; //0309
+ 		vin-supply = <&qps615_1p8_vreg>;
+ 		regulator-min-microvolt = <1800000>;
+ 		regulator-max-microvolt = <1800000>;
+@@ -112,10 +134,20 @@ qps615_rc1_resx_vreg: qps615-rc1-resx-vreg {
+ };
+ 
+ &i2c1 {
+-	status = "okay";
+-
++	status = "okay"; //0309 //20260319
++    //status = "disabled";//0309 //20260319
++	
++	//20260319---
++	pcf85063: pcf85063@51 {
++    	compatible = "nxp,pcf85063";
++    	status = "okay";
++		reg = <0x51>;
++	};
++	//---20260319
++	
+ 	i2c-mux@71 {
+ 		compatible = "nxp,pca9847";
++		status = "disabled"; //20260319
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
+ 		reg = <0x71>;
+@@ -178,8 +210,8 @@ i2c@7 {
+ 	lt9211c_codec: lvds-bridge@29 {
+ 		compatible = "lontium,lt9211c";
+ 		reg = <0x29>;
+-		status = "okay";
+-
++		//status = "okay"; //0309
++        status = "disabled"; //0309 + elyse
+ 		reset-gpios = <&tlmm 117 GPIO_ACTIVE_HIGH>;
+ 
+ 		ports {
+@@ -215,16 +247,55 @@ lt9211c_out_even: endpoint {
+ 
+ 	qps615_rc0_switch: pcie-switch-0@33 {
+ 		compatible = "qcom,switch-i2c";
++		status = "disabled"; //20260319
+ 		reg = <0x33>;
+ 		vdda-supply = <&qps615_rc0_resx_vreg>;
+-		status = "okay";
++		//status = "okay"; //20260319
+ 	};
+ };
+ 
+-&i2c2 {
+-	status = "okay";
++//20260312---
++&dp_hot_plug_det {
++//change from gpio 104 to 24
++//	pins = "gpio104";
++	pins = "gpio24";
++	function = "gpio";
++	bias-disable;
++};
++
++&mdss_mdp {
++    status = "okay";
++    
++};
++
++&mdss_dp {
++    status = "okay";	
++
++    pinctrl-names = "default";
++    pinctrl-0 = <&dp_hot_plug_det>;
++       
++    data-lanes = <0 1>;
++    
++    ports {
++        port@1 {
++            reg = <1>;
++            mdss_dp_out: endpoint {
++                data-lanes = <0 1>;             
++                lane-mapping = <0 1 2 3>; //vv
++                remote-endpoint = <&dp_connector_in>;
++            };
++        };
++    };
++};
++//---20260312
++
++&i2c2 { //0309 //20260312
++//&i2c0 { //0309 //20260312
++	//status = "okay"; //20260312
++    status = "disabled"; //20260312
+ 
+ 	i2c-mux@71 {
++        status = "disabled"; //0309
+ 		compatible = "nxp,pca9847";
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
+@@ -296,6 +367,7 @@ &lt9611_codec {
+ 	status = "disabled";
+ };
+ 
++/* 20260312
+ &mdss_dsi {
+ 	ports {
+ 		port@1 {
+@@ -307,6 +379,7 @@ mdss_dsi0_out: endpoint {
+ 		};
+ 	};
+ };
++*/
+ 
+ &pcie0 {
+ 	bus-range = <0x80 0xff>;
+@@ -327,6 +400,7 @@ pcieport: pcie@0 {
+ 		reg = <0x0 0x0 0x0 0x0 0x0>;
+ 		#address-cells = <5>;
+ 		#size-cells = <0>;
++        status = "okay"; //0309
+ 		/* BDF 1.0.0 */
+ 		pcie0_bus1_dev0_fn0: pcie0-bus1-dev0-fn0 {
+ 			reg = <0x0 0x0 0x0 0x0 0x0>;
+@@ -399,6 +473,22 @@ &pcie0_phy {
+ 	status = "okay";
+ };
+ 
++//20260311---
++&pcie1 {
++	iommu-map = <0x0 &apps_smmu 0x1c80 0x1>,
++		    <0x100 &apps_smmu 0x1c81 0x1>,
++		    <0x208 &apps_smmu 0x1c84 0x1>,
++		    <0x210 &apps_smmu 0x1c85 0x1>,
++		    <0x218 &apps_smmu 0x1c86 0x1>,
++		    <0x300 &apps_smmu 0x1c87 0x1>,
++		    <0x408 &apps_smmu 0x1c90 0x1>,
++		    <0x410 &apps_smmu 0x1c91 0x1>,
++		    <0x418 &apps_smmu 0x1c92 0x1>,
++		    <0x500 &apps_smmu 0x1c93 0x1>,
++			<0x501 &apps_smmu 0x1c94 0x1>;
++};
++//---20260311
++/* 20260311
+ &pcie1 {
+ 	iommu-map = <0x0 &apps_smmu 0x1c80 0x1>,
+ 		    <0x100 &apps_smmu 0x1c81 0x1>,
+@@ -410,6 +500,7 @@ &pcie1 {
+ 		    <0x410 &apps_smmu 0x1c91 0x1>,
+ 		    <0x418 &apps_smmu 0x1c92 0x1>,
+ 		    <0x500 &apps_smmu 0x1c93 0x1>,
++			<0x501 &apps_smmu 0x1c94 0x1>,
+ 		    <0x600 &apps_smmu 0x1c94 0x1>,
+ 		    <0x700 &apps_smmu 0x1c95 0x1>,
+ 		    <0x701 &apps_smmu 0x1c96 0x1>,
+@@ -417,7 +508,7 @@ &pcie1 {
+ 		    <0x900 &apps_smmu 0x1c98 0x1>,
+ 		    <0x901 &apps_smmu 0x1c99 0x1>;
+ };
+-
++*/
+ &pcie1_bus3_dev0_fn0 {
+ 	reg = <0x0 0x0 0x0 0x0 0x0>;
+ 
+@@ -455,6 +546,11 @@ pcie1_bus7_dev0_fn1: pcie1-bus7-dev0-fn1 {
+ 		};
+ 	};
+ };
++//0309
++&pcie1_phy {
++	qcom,refclk-always-on;
++	status = "okay";
++};
+ 
+ &pm7250b_gpios {
+ 	gpio5_tpm_dig_out {
+@@ -477,12 +573,12 @@ &qps615_rsex_vreg {
+ &qupv3_id_1 {
+ 	status = "okay";
+ };
+-
++/* 20260312
+ &redriver_ss_in {
+ 	data-lanes = <0 1 2 3>;
+ 	remote-endpoint = <&usb_1_qmpphy_out>;
+ };
+-
++*/
+ &sound {
+ 	compatible = "qcom,qcs6490-rb3gen2-ia-sndcard";
+ 	model = "qcs6490-rb3gen2-ia-snd-card";
+@@ -507,7 +603,8 @@ cpu {
+ 
+ 
+ 		codec {
+-			sound-dai = <&wcd9375 0>, <&swr0 0>, <&lpass_rx_macro 0>;
++			//sound-dai = <&wcd9375 0>, <&swr0 0>, <&lpass_rx_macro 0>; //20260319
++			sound-dai = <&wcd9375 0>, <&swr0 0>; //20260319
+ 		};
+ 	};
+ 
+@@ -526,8 +623,20 @@ codec {
+ };
+ 
+ &spi11 {
+-	status = "okay";
+-
++	//status = "okay"; //0309 //20260325 tpm
++    status = "disabled";//0309 //20260325 tpm
++	
++	slb9672tpm: slb9672tpm@0 {
++		compatible = "infineon,slb9672", "tcg,tpm_tis-spi";
++		reg = <0>;
++		spi-max-frequency = <10000000>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&tpm_reset>;
++	};
++	
++	/* //20260325 tpm
+ 	st33htpm0: st33htpm@0 {
+ 		compatible = "st,st33htpm-spi";
+ 		reg = <0>;
+@@ -536,10 +645,12 @@ st33htpm0: st33htpm@0 {
+ 		#size-cells = <0>;
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&gpio5_dig_out_default>;
+-		status = "okay";
++		//status = "okay";//0309
++        status = "disabled";//0309
+ 	};
++	*/
+ };
+-
++/* 0309
+ &spmi_bus {
+ 	pmic@PM7250B_SID {
+ 		pm7250b_bcl: bcl@1d00 {
+@@ -555,6 +666,7 @@ pm7250b_bcl: bcl@1d00 {
+ 		};
+ 	};
+ };
++*/
+ 
+ &swr0 {
+ 	wcd937x_rx: codec@0,4 {
+@@ -572,6 +684,7 @@ wcd937x_tx: codec@0,3 {
+ 	};
+ };
+ 
++/*0309 + elyse
+ &thermal_zones {
+ 	pm7250b-ibat-lvl0 {
+ 		polling-delay-passive = <0>;
+@@ -704,7 +817,7 @@ map0 {
+ 		};
+ 	};
+ };
+-
++*/
+ &tlmm {
+ 	qps615_rc0_intn_wol {
+ 		rtl_rc0_intn_wol_sig: rtl-rc0-intn-wol-sig {
+@@ -735,8 +848,23 @@ wcd_reset_n_sleep: wcd-reset-n-sleep-state {
+ 		drive-strength = <8>;
+ 		bias-disable;
+ 	};
++	
++	//20260325 tpm---
++	tpm_reset: tpm_reset {
++		pins = "gpio35";
++		function = "gpio";
++		//bias-disable;
++		
++		power-source = <1>;
++		output-high;
++		input-disable;
++		bias-pull-up;
++		qcom,drive-strength = <3>;
++	};
++	//---20260325 tpm
+ };
+ 
++/* 20260223
+ &uart4 {
+ 	status = "okay";
+ };
+@@ -744,6 +872,7 @@ &uart4 {
+ &uart7 {
+ 	status = "disabled";
+ };
++*/
+ 
+ &soc {
+ 	leds {
+@@ -756,7 +885,25 @@ led-0 {
+ 			gpios = <&pm8350c_gpios 9 GPIO_ACTIVE_HIGH>;
+ 			default-state = "off";
+ 			panic-indicator;
+-			status = "okay";
++			//status = "okay"; //0309
++            status = "disabled"; //0309
+ 		};
+ 	};
+ };
++//0309
++&spmi_bus {
++    /* °w¹ï SID 8 */
++    pmic@8 {
++        status = "disabled";
++    };
++    /* °w¹ï SID 9 */
++    pmic@9 {
++        status = "disabled";
++    };
++};
++
++//20260312
++&wifi {
++	status = "disabled";
++};
++//---20260312
+diff --git a/arch/arm64/boot/dts/qcom/qcs6490-addons-rb3gen2.dtsi b/arch/arm64/boot/dts/qcom/qcs6490-addons-rb3gen2.dtsi
+index 646d0343b53d..17ef53696962 100644
+--- a/arch/arm64/boot/dts/qcom/qcs6490-addons-rb3gen2.dtsi
++++ b/arch/arm64/boot/dts/qcom/qcs6490-addons-rb3gen2.dtsi
+@@ -27,7 +27,7 @@ qps615_1p8_vreg: qps615-1p8-vreg {
+ 		regulator-max-microvolt = <1800000>;
+ 		enable-active-high;
+ 		regulator-enable-ramp-delay = <10000>;
+-	};
++	}; 
+ 
+ 	qps615_rsex_vreg: qps615-rsex-vreg {
+ 		compatible = "regulator-fixed";
+@@ -43,7 +43,7 @@ qps615_rsex_vreg: qps615-rsex-vreg {
+ 	upd_3p3_vreg: upd_3p3_vreg {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "upd_3p3_vreg";
+-		gpio = <&pm7250b_gpios 1 0>;
++		//gpio = <&pm7250b_gpios 1 0>; //0309
+ 		vin-supply = <&qps615_rsex_vreg>;
+ 		regulator-min-microvolt = <3300000>;
+ 		regulator-max-microvolt = <3300000>;
+@@ -55,7 +55,7 @@ upd_3p3_vreg: upd_3p3_vreg {
+ 	upd_rest_vreg: upd_rest_vreg {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "upd_rest_vreg";
+-		gpio = <&pm8350c_gpios 4 0>;
++		//gpio = <&pm8350c_gpios 4 0>; //0309
+ 		vin-supply = <&upd_3p3_vreg>;
+ 		regulator-min-microvolt = <3300000>;
+ 		regulator-max-microvolt = <3300000>;
+@@ -75,16 +75,17 @@ usbhub_rest_vreg: usbhub_rest_vreg {
+ 	qep_vreg: qep_vreg {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "qep_vreg";
+-		gpio = <&pm7325_gpios 8 0>;
++		//gpio = <&pm7325_gpios 8 0>; //0309
+ 		regulator-min-microvolt = <1800000>;
+ 		regulator-max-microvolt = <1800000>;
+ 		enable-active-high;
++        
+ 	};
+ 
+ 	aqr_vreg: aqr_vreg {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "aqr_vreg";
+-		gpio = <&pm7250b_gpios 4 0>;
++		//gpio = <&pm7250b_gpios 4 0>; //0309
+ 		regulator-min-microvolt = <1800000>;
+ 		regulator-max-microvolt = <1800000>;
+ 		enable-active-high;
+@@ -199,11 +200,15 @@ qps615_eth0,qps615_eth0@pcie1_rp {
+ 					reg = <0x0 0x0 0x0 0x0 0x0>;
+ 					pinctrl-names = "default";
+ 					pinctrl-0 = <&aqr_intn_wol_sig>;
+-					qcom,phy-rst-gpio-id = <0>;
+-					interrupts-extended = <&tlmm 141 IRQ_TYPE_EDGE_FALLING>;
++					//qcom,phy-rst-gpio-id = <0>; //20260313 	qps615
++					qcom,phy-rst-gpio-id = <1>; //20260313 	qps615
++					qcom,mdc-clk = <0x08>; //20260313 	qps615
++					qcom,phy-port-interface = <0x04>; //20260313 	qps615
++					//interrupts-extended = <&tlmm 141 IRQ_TYPE_EDGE_FALLING>; //20260313 	qps615
++					interrupts-extended = <&tlmm 121 IRQ_TYPE_EDGE_FALLING>; //20260313 	qps615
+ 					interrupt-names = "wol_irq";
+ 					phy-supply = <&aqr_vreg>;
+-					qcom,phy-rst-delay-us = <221000>;
++                    qcom,phy-rst-delay-us = <221000>;
+ 					#address-cells = <1>;
+ 					#size-cells = <1>;
+ 				};
+@@ -221,8 +226,12 @@ qps615_eth1,qps615_eth1@pcie1_rp {
+ 					reg = <0x100 0x0 0x0 0x0 0x0>;
+ 					pinctrl-names = "default";
+ 					pinctrl-0 = <&napa_intn_wol_sig>;
+-					qcom,phy-rst-gpio-id = <1>;
+-					interrupts-extended = <&tlmm 101 IRQ_TYPE_EDGE_FALLING>;
++					//qcom,phy-rst-gpio-id = <1>; //20260313 	qps615
++					qcom,phy-rst-gpio-id = <0>; //20260313 	qps615
++					qcom,mdc-clk = <0x08>; //20260313 	qps615
++					qcom,phy-port-interface = <0x04>; //20260313 	qps615
++					//interrupts-extended = <&tlmm 101 IRQ_TYPE_EDGE_FALLING>; //20260313 	qps615
++					interrupts-extended = <&tlmm 127 IRQ_TYPE_EDGE_FALLING>; //20260313 	qps615
+ 					interrupt-names = "wol_irq";
+ 					phy-supply = <&qep_vreg>;
+ 					qcom,phy-rst-delay-us = <20000>;
+@@ -255,7 +264,7 @@ &q6apmbedai {
+ &sound {
+ 	compatible = "qcom,qcs6490-rb3gen2-sndcard";
+ 	model = "qcs6490-rb3gen2-snd-card";
+-
++    status = "disabled"; //20260312
+ 	pinctrl-names = "default", "stub_aif1_active", "stub_aif1_sleep";
+ 	pinctrl-0 = <&mi2s0_data0_sleep>, <&mi2s0_data1_sleep>, <&mi2s0_mclk_sleep>,
+ 		    <&mi2s0_sclk_sleep>, <&mi2s0_ws_sleep>;
+@@ -365,12 +374,14 @@ pcie1_usb_hub_reset_default: pcie1_usb_hub_reset_default {
+ 	qps615_intn_wol {
+ 		aqr_intn_wol_sig: aqr_intn_wol_sig {
+ 			mux {
+-				pins = "gpio141";
++				//pins = "gpio141"; //20260313 	qps615
++				pins = "gpio121"; //20260313 	qps615
+ 				function = "gpio";
+ 			};
+ 
+ 			config {
+-				pins = "gpio141";
++				//pins = "gpio141"; //20260313 	qps615
++				pins = "gpio121"; //20260313 	qps615
+ 				input-enable;
+ 				bias-disable;
+ 			};
+@@ -378,12 +389,14 @@ config {
+ 
+ 		napa_intn_wol_sig: napa_intn_wol_sig {
+ 			mux {
+-				pins = "gpio101";
++				//pins = "gpio101"; //20260313 	qps615
++				pins = "gpio127"; //20260313 	qps615
+ 				function = "gpio";
+ 			};
+ 
+ 			config {
+-				pins = "gpio101";
++				//pins = "gpio101"; //20260313 	qps615
++				pins = "gpio127"; //20260313 	qps615
+ 				input-enable;
+ 				bias-disable;
+ 			};
+@@ -418,7 +431,7 @@ &mi2s0_ws {
+ 	bias-disable;
+ 	output-high;
+ };
+-
++/*
+ &spmi_bus {
+ 	pmic@PM7250B_SID {
+ 		pm7250b_bcl: bcl@1d00 {
+@@ -434,7 +447,8 @@ pm7250b_bcl: bcl@1d00 {
+ 		};
+ 	};
+ };
+-
++*/
++/*
+ &thermal_zones {
+ 	pm7250b-ibat-lvl0 {
+ 		polling-delay-passive = <0>;
+@@ -567,3 +581,4 @@ map0 {
+ 		};
+ 	};
+ };
++*/
+diff --git a/arch/arm64/boot/dts/qcom/qcs6490-rb3gen2.dts b/arch/arm64/boot/dts/qcom/qcs6490-rb3gen2.dts
+index 04f61e15b13b..c179e8282da7 100644
+--- a/arch/arm64/boot/dts/qcom/qcs6490-rb3gen2.dts
++++ b/arch/arm64/boot/dts/qcom/qcs6490-rb3gen2.dts
+@@ -34,8 +34,11 @@ / {
+ 
+ 	aliases {
+ 		serial0 = &uart5;
+-		bluetooth0 = &bluetooth;
++		//bluetooth0 = &bluetooth; //20260223
+ 		serial1 = &uart7;
++        serial2 = &uart12; //20260223
++		serial3 = &uart6; //20260223
++		wdt = &watchdog; //20260325
+ 	};
+ 
+ 	chosen {
+@@ -92,6 +95,7 @@ lt9611_1v2: lt9611-vdd12-regulator {
+ 	};
+ 
+ 	pmic-glink {
++        status = "disabled";//0309 //20260310
+ 		compatible = "qcom,sm8350-pmic-glink", "qcom,pmic-glink";
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
+@@ -99,6 +103,7 @@ pmic-glink {
+ 		qcom,thermal-mitigation = <3000000 1500000 1000000 500000>;
+ 
+ 		connector@0 {
++			status = "disabled"; //20260310
+ 			compatible = "usb-c-connector";
+ 			reg = <0>;
+ 			power-role = "dual";
+@@ -187,6 +192,22 @@ codec {
+ 			};
+ 		};
+ 	};
++	
++	//20260309---
++	test_device {
++		compatible = "test,gpio-device";
++		pinctrl-names = "default";
++		pinctrl-0 = <&test_gpio_pins>;
++		enable-gpios = <&tlmm 20 GPIO_ACTIVE_LOW>,<&tlmm 21 GPIO_ACTIVE_LOW>,
++		               <&tlmm 105 GPIO_ACTIVE_LOW>,<&tlmm 106 GPIO_ACTIVE_LOW>,
++					   <&tlmm 107 GPIO_ACTIVE_LOW>,<&tlmm 108 GPIO_ACTIVE_LOW>,
++					   <&tlmm 109 GPIO_ACTIVE_LOW>,<&tlmm 110 GPIO_ACTIVE_LOW>,
++					   <&tlmm 111 GPIO_ACTIVE_LOW>,<&tlmm 112 GPIO_ACTIVE_LOW>,
++					   <&tlmm 113 GPIO_ACTIVE_LOW>,<&tlmm 114 GPIO_ACTIVE_LOW>,
++					   <&tlmm 115 GPIO_ACTIVE_LOW>,<&tlmm 116 GPIO_ACTIVE_LOW>;
++		status = "okay";
++	};
++	//---20260309
+ 
+ 	thermal-zones {
+ 		quiet-thermal {
+@@ -413,8 +434,10 @@ vreg_l8c_1p62: ldo8 {
+ 		};
+ 
+ 		vreg_l9c_2p96: ldo9 {
+-			regulator-min-microvolt = <2700000>;
+-			regulator-max-microvolt = <3544000>;
++			//regulator-min-microvolt = <2700000>; //20260312
++			//regulator-max-microvolt = <3544000>; //20260312
++            regulator-min-microvolt = <2960000>; //20260312
++            regulator-max-microvolt = <2960000>; //20260312
+ 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+ 		};
+ 
+@@ -495,7 +518,7 @@ &i2c0 {
+ 	lt9611_codec: hdmi-bridge@2b {
+ 		compatible = "lontium,lt9611uxc";
+ 		reg = <0x2b>;
+-
++        status = "disabled";//0309
+ 		interrupts-extended = <&tlmm 24 IRQ_TYPE_EDGE_FALLING>;
+ 		reset-gpios = <&pm7250b_gpios 2 GPIO_ACTIVE_HIGH>;
+ 
+@@ -533,6 +556,7 @@ &i2c1 {
+ 	status = "okay";
+ 
+ 	typec-mux@42 {
++        status = "disabled"; //0309
+ 		compatible = "fcs,fsa4480";
+ 		reg = <0x42>;
+ 		interrupts-extended = <&tlmm 2 IRQ_TYPE_LEVEL_LOW>;
+@@ -556,6 +580,7 @@ fsa4480_sbu_mux: endpoint {
+ 	};
+ 
+ 	typec-retimer@1c {
++        status = "disabled"; //0309
+ 		compatible = "onnn,nb7vpq904m";
+ 		reg = <0x1c>;
+ 
+@@ -588,6 +613,33 @@ redriver_ss_in: endpoint {
+ 	};
+ };
+ 
++//20260325---
++&watchdog {
++	status = "okay";
++};
++//---20260325
++
++//20260302---
++&i2c9 {
++	//clock-frequency = <100000>;
++	status = "okay";
++	
++	
++	//20260324---
++	baseboard_eeprom: baseboard_eeprom@50 {
++		compatible = "atmel,24c32";
++		reg = <0x50>;
++		pagesize = <32>;
++		address-width = <16>;		
++ 	};
++	//---20260324
++};
++&i2c15 {
++	//clock-frequency = <100000>;
++	status = "okay";
++};
++//---20260302
++
+ &ipa {
+ 	status = "disabled";
+ };
+@@ -666,7 +718,8 @@ &pmk8350_pon {
+ };
+ 
+ &pmk8350_rtc {
+-	status = "okay";
++	//status = "okay"; //20260319
++	status = "disabled"; //20260319
+ };
+ 
+ &pmk8350_vadc {
+@@ -771,10 +824,27 @@ &mdss_dp_out {
+ &mdss_dsi {
+ 	vdda-supply = <&vreg_l6b_1p2>;
+ 	status = "okay";
++    //20260312---
++    // Define DSI panel for DSI always on feature
++	panel_disp0: panel_disp0@0 {
++		reg = <0>;
++		// fake 1080x1920 dsi panel
++		//compatible = "lg,acx467akm-7", "panel-simple-dsi";
++		// fake 1920x1200 dsi panel
++		compatible = "panasonic,vvx10f004b00", "panel-simple-dsi";
++	 
++		port {
++			panel_dsi0_port: endpoint {
++				remote-endpoint = <&mdss_dsi0_out>;
++			};
++		};
++	};
++	//---20260312
+ };
+ 
+ &mdss_dsi0_out {
+-	remote-endpoint = <&lt9611_a>;
++	//remote-endpoint = <&lt9611_a>; //20260312
++    remote-endpoint = <&panel_dsi0_port>; //20260312
+ 	data-lanes = <0 1 2 3>;
+ };
+ 
+@@ -784,7 +854,8 @@ &mdss_dsi_phy {
+ };
+ 
+ &mdss_edp {
+-	status = "okay";
++	//status = "okay"; //0309
++    status = "disabled";//0309
+ };
+ 
+ &mdss_edp_out {
+@@ -792,10 +863,12 @@ &mdss_edp_out {
+ 	link-frequencies = /bits/ 64 <1620000000 2700000000 5400000000 8100000000>;
+ 
+ 	remote-endpoint = <&dp_connector_in>;
++    status = "disabled";//0309
+ };
+ 
+ &mdss_edp_phy {
+-	status = "okay";
++	//status = "okay"; //0309
++    status = "disabled";//0309
+ };
+ 
+ &pcie1 {
+@@ -913,8 +986,8 @@ &remoteproc_wpss {
+ };
+ 
+ &spi3 {
+-	status = "okay";
+-
++	//status = "okay"; //0309
++    status = "disabled"; //0309
+ 	mcp2518fd: can@0 {
+ 		compatible = "microchip,mcp2518fd";
+ 		reg = <0>;
+@@ -928,6 +1001,57 @@ mcp2518fd: can@0 {
+ 	};
+ };
+ 
++//20260313 SPI---
++&spi4 {
++	status = "okay";
++	
++	flash@0 {
++		compatible = "winbond,w25q128fw", "jedec,spi-nor";
++		reg = <0>;									
++		spi-max-frequency = <10000000>; //<104000000>;
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;								
++			system1@0 {
++				label = "spi4-system1";
++				reg = <0x0 0x00200000>;
++			};
++		};
++	};
++	
++	/*
++	spidev0@0 {
++        compatible = "spidev";
++        status = "okay";
++		reg = <0>;
++        spi-max-frequency = <10000000>; //<104000000>;
++    };
++	*/
++};
++//---20260313 SPI
++
++//20260313 SPI---
++&spi14 {
++	status = "okay";
++	
++	flash@0 {
++		compatible = "winbond,w25q256", "jedec,spi-nor";
++		reg = <0>;									
++		spi-max-frequency = <10000000>; //<104000000>;
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;								
++			system1@0 {
++				label = "spi14-system1";
++				reg = <0x0 0x02000000>;
++			};
++		};
++	};
++};
++//---20260313 SPI
++
+ &swr2 {
+ 	qcom,din-ports = <0>;
+ 	qcom,dout-ports = <8>;
+@@ -956,15 +1080,27 @@ right_spkr: speaker@0,2 {
+ };
+ 
+ &tlmm {
++	//20260309---
++	test_gpio_pins: test-gpio-state {
++        pins = "gpio20","gpio21","gpio105","gpio106","gpio107","gpio108","gpio109",
++		       "gpio110","gpio111","gpio112","gpio113","gpio114","gpio115","gpio116";
++        function = "gpio";
++        bias-disable;
++        //drive-strength = <8>;
++    };
++	//---20260309
++	
+ 	bt_en: bt-en-state {
+-		pins = "gpio85";
++		//pins = "gpio85";
++        pins = "gpio12";//0309
+ 		function = "gpio";
+ 		output-low;
+ 		bias-disable;
+ 	};
+ 
+ 	lt9611_irq_pin: lt9611-irq-state {
+-		pins = "gpio24";
++		//pins = "gpio24";
++        pins = "gpio13";//0309
+ 		function = "gpio";
+ 		drive-strength = <2>;
+ 		bias-disable;
+@@ -1032,20 +1168,35 @@ qup_uart7_sleep_tx: qup-uart7-sleep-tx-state {
+ 	};
+ 
+ 	sw_ctrl: sw-ctrl-state {
+-		pins = "gpio86";
++		//pins = "gpio86";
++        pins = "gpio14"; //0309
+ 		function = "gpio";
+ 		bias-pull-down;
+ 	};
+ };
+ 
++//20260223---
++&uart12 {
++	compatible = "qcom,geni-uart";
++	status = "okay";
++};
++
++&uart6 {
++	compatible = "qcom,geni-uart";
++	status = "okay";
++};
++//---20260223
+ &uart5 {
+ 	compatible = "qcom,geni-debug-uart";
+ 	status = "okay";
+ };
+ 
+ &uart7 {
++	compatible = "qcom,geni-uart";
+ 	status = "okay";
+-	/delete-property/interrupts;
++    //status = "disabled";//0309 //20260223
++	///delete-property/interrupts; //20260223
++    /* 20260223---
+ 	interrupts-extended = <&intc GIC_SPI 608 IRQ_TYPE_LEVEL_HIGH>,
+ 				<&tlmm 31 IRQ_TYPE_EDGE_FALLING>;
+ 	pinctrl-names = "default", "sleep";
+@@ -1068,6 +1219,7 @@ bluetooth: bluetooth {
+ 		vddasd-supply = <&vreg_l11c_2p8>;
+ 		max-speed = <3200000>;
+ 	};
++    */
+ };
+ 
+ &ufs_mem_hc {
+@@ -1126,8 +1278,9 @@ &usb_1 {
+ 	maximum-speed = "super-speed";
+ 	snps,dis-u2-entry-quirk;
+ 	snps,dis-u1-entry-quirk;
+-	dr_mode = "otg";
+-	usb-role-switch;
++	dr_mode = "host"; //20260415 for adb
++	//dr_mode = "host"; //0309 elyse //20260415 for adb
++	//usb-role-switch; //0309 elyse //20260415 for adb 
+ 	qcom,enable-rt;
+ 	wakeup-source;
+ 
+@@ -1161,7 +1314,7 @@ &usb_1_qmpphy {
+ 	vdda-phy-supply = <&vreg_l6b_1p2>;
+ 	vdda-pll-supply = <&vreg_l1b_0p912>;
+ 
+-	orientation-switch;
++	//orientation-switch; //0309 elyse
+ 	status = "okay";
+ };
+ 
+@@ -1216,17 +1369,20 @@ &sdc2_data {
+ };
+ 
+ &tlmm {
++	/* 20260302
+ 	usb2_id_det_default: usb2_id_det_default {
+ 		pins = "gpio61";
+ 		function = "gpio";
+ 		drive-strength = <2>;
+ 		bias-pull-up;
+ 	};
++	*/
+ 
+ 	sd_cd: sd-cd-state {
+ 		pins = "gpio91";
+ 		function = "gpio";
+-		bias-pull-up;
++		//bias-pull-up; //20260312
++        bias-disable; //20260312
+ 	};
+ };
+ 
+@@ -1234,7 +1390,7 @@ &soc {
+ 	vbus_supply_regulator: vbus_supply_regulator {
+ 	       compatible = "regulator-fixed";
+ 	       regulator-name = "vbus_supply";
+-	       gpio = <&tlmm 63 GPIO_ACTIVE_HIGH>;
++	       //gpio = <&tlmm 63 GPIO_ACTIVE_HIGH>;//0309
+ 	       regulator-min-microvolt = <5000000>;
+ 	       regulator-max-microvolt = <5000000>;
+ 	       regulator-boot-on;
+@@ -1242,24 +1398,27 @@ vbus_supply_regulator: vbus_supply_regulator {
+ 	};
+ 
+ 	connector_usb2: connector_usb2 {
++		status = "disabled"; //20260310
+ 		compatible = "gpio-usb-b-connector";
+ 		vbus-gpio = <&pm7325_gpios 9 GPIO_ACTIVE_HIGH>;
+-		id-gpio = <&tlmm 61 GPIO_ACTIVE_HIGH>;
+-		vbus-supply = <&vbus_supply_regulator>;
++		//id-gpio = <&tlmm 61 GPIO_ACTIVE_HIGH>; //20260310
++		//vbus-supply = <&vbus_supply_regulator>; //20260310
+ 
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&usb2_vbus_det_default>,
+-			     <&usb2_id_det_default>;
++		//pinctrl-names = "default"; //20260310
++		//pinctrl-0 = <&usb2_vbus_det_default>; //20260310
++			     //<&usb2_id_det_default>; //20260302 //20260310
+ 		ports {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 
++			/* 20260310
+ 			port@0 {
+ 				reg = <0>;
+ 				usb2_port_connector: endpoint {
+ 					remote-endpoint = <&usb2_port>;
+ 				};
+ 			};
++			*/
+ 		};
+ 	};
+ };
+@@ -1285,10 +1444,10 @@ &usb_2 {
+ 	snps,dis-u2-entry-quirk;
+ 	snps,dis-u1-entry-quirk;
+ 
+-	usb-role-switch;
++	//usb-role-switch; //0309 elyse
+ 	qcom,enable-rt;
+ 	wakeup-source;
+-	dr_mode = "otg";
++	dr_mode = "host"; //0309 elyse
+ 
+ 	status = "okay";
+ 
+@@ -1296,12 +1455,14 @@ ports {
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
+ 
++		/* 20260310
+ 		port@0 {
+ 			reg = <0>;
+ 			usb2_port: endpoint {
+ 				remote-endpoint = <&usb2_port_connector>;
+ 			};
+ 		};
++		*/
+ 
+ 		port@1 {
+ 			usb2_role_switch: endpoint {
+diff --git a/arch/arm64/boot/dts/qcom/sc7280.dtsi b/arch/arm64/boot/dts/qcom/sc7280.dtsi
+index a6b35cea5c77..d5fc489c9dec 100644
+--- a/arch/arm64/boot/dts/qcom/sc7280.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc7280.dtsi
+@@ -85,7 +85,7 @@ sleep_clk: sleep-clk {
+ 			clock-frequency = <32764>;
+ 			#clock-cells = <0>;
+ 		};
+-	};
++	}; 
+ 
+ 	reserved-memory {
+ 		#address-cells = <2>;
+@@ -1495,7 +1495,8 @@ uart6: serial@998000 {
+ 				clocks = <&gcc GCC_QUPV3_WRAP0_S6_CLK>;
+ 				clock-names = "se";
+ 				pinctrl-names = "default";
+-				pinctrl-0 = <&qup_uart6_cts>, <&qup_uart6_rts>, <&qup_uart6_tx>, <&qup_uart6_rx>;
++				//pinctrl-0 = <&qup_uart6_cts>, <&qup_uart6_rts>, <&qup_uart6_tx>, <&qup_uart6_rx>; //20260223
++                pinctrl-0 = <&qup_uart6_tx>, <&qup_uart6_rx>; //20260223
+ 				interrupts = <GIC_SPI 607 IRQ_TYPE_LEVEL_HIGH>;
+ 				power-domains = <&rpmhpd SC7280_CX>;
+ 				operating-points-v2 = <&qup_opp_table>;
+@@ -5238,7 +5239,7 @@ usb_1_hsphy: phy@88e3000 {
+ 			compatible = "qcom,sc7280-usb-hs-phy",
+ 				     "qcom,usb-snps-hs-7nm-phy";
+ 			reg = <0 0x088e3000 0 0x400>;
+-			status = "disabled";
++			status = "ok"; //0309 elyse
+ 			#phy-cells = <0>;
+ 
+ 			clocks = <&rpmhcc RPMH_CXO_CLK>;
+@@ -5251,7 +5252,7 @@ usb_2_hsphy: phy@88e4000 {
+ 			compatible = "qcom,sc7280-usb-hs-phy",
+ 				     "qcom,usb-snps-hs-7nm-phy";
+ 			reg = <0 0x088e4000 0 0x400>;
+-			status = "disabled";
++			status = "ok"; //0309 elyse
+ 			#phy-cells = <0>;
+ 
+ 			clocks = <&rpmhcc RPMH_CXO_CLK>;
+@@ -5263,7 +5264,7 @@ usb_2_hsphy: phy@88e4000 {
+ 		usb_1_qmpphy: phy@88e8000 {
+ 			compatible = "qcom,sc7280-qmp-usb3-dp-phy";
+ 			reg = <0 0x088e8000 0 0x3000>;
+-			status = "disabled";
++			status = "ok"; //0309 elyse
+ 
+ 			clocks = <&gcc GCC_USB3_PRIM_PHY_AUX_CLK>,
+ 				 <&rpmhcc RPMH_CXO_CLK>,
+@@ -5278,6 +5279,7 @@ usb_1_qmpphy: phy@88e8000 {
+ 				 <&gcc GCC_USB3_PHY_PRIM_BCR>;
+ 			reset-names = "phy", "common";
+ 
++			default-typec-orientation-reverse; //0309 elyse
+ 			#clock-cells = <1>;
+ 			#phy-cells = <1>;
+ 
+@@ -5311,7 +5313,7 @@ usb_1_qmpphy_dp_in: endpoint {
+ 		usb_2: usb@8cf8800 {
+ 			compatible = "qcom,sc7280-dwc3", "qcom,dwc3";
+ 			reg = <0 0x08cf8800 0 0x400>;
+-			status = "disabled";
++			status = "ok"; //0309 elyse
+ 			#address-cells = <2>;
+ 			#size-cells = <2>;
+ 			ranges;
+@@ -5572,7 +5574,7 @@ nsp_noc: interconnect@a0c0000 {
+ 		usb_1: usb@a6f8800 {
+ 			compatible = "qcom,sc7280-dwc3", "qcom,dwc3";
+ 			reg = <0 0x0a6f8800 0 0x400>;
+-			status = "disabled";
++			status = "ok"; //0309 elyse
+ 			#address-cells = <2>;
+ 			#size-cells = <2>;
+ 			ranges;
+@@ -6863,7 +6865,8 @@ qup_spi4_cs: qup-spi4-cs-state {
+ 			};
+ 
+ 			qup_spi4_cs_gpio: qup-spi4-cs-gpio-state {
+-				pins = "gpio19";
++				//pins = "gpio19"; //20260313 SPI
++				pins = "gpio19", "gpio161"; //20260313 SPI
+ 				function = "gpio";
+ 			};
+ 
+@@ -6968,7 +6971,7 @@ qup_spi11_cs: qup-spi11-cs-state {
+ 			};
+ 
+ 			qup_spi11_cs_gpio: qup-spi11-cs-gpio-state {
+-				pins = "gpio47";
++				pins = "gpio47", "gpio34"; //20260325 tpm
+ 				function = "gpio";
+ 			};
+ 
+@@ -7013,7 +7016,7 @@ qup_spi14_cs: qup-spi14-cs-state {
+ 			};
+ 
+ 			qup_spi14_cs_gpio: qup-spi14-cs-gpio-state {
+-				pins = "gpio59";
++				pins = "gpio59", "gpio62"; //20260313 SPI
+ 				function = "gpio";
+ 			};
+ 
+@@ -7628,11 +7631,12 @@ msi-controller@17a40000 {
+ 		};
+ 
+ 		watchdog: watchdog@17c10000 {
+-			compatible = "qcom,apss-wdt-sc7280", "qcom,kpss-wdt";
++			//compatible = "qcom,apss-wdt-sc7280", "qcom,kpss-wdt"; //20260325
++			compatible = "qcom,kpss-wdt"; //20260325
+ 			reg = <0 0x17c10000 0 0x1000>;
+ 			clocks = <&sleep_clk>;
+ 			interrupts = <GIC_SPI 0 IRQ_TYPE_EDGE_RISING>;
+-			status = "reserved"; /* Owned by Gunyah hyp */
++			status = "okay"; /* Owned by Gunyah hyp */ //20260325
+ 		};
+ 
+ 		timer@17c20000 {
+diff --git a/arch/arm64/configs/qcom_defconfig b/arch/arm64/configs/qcom_defconfig
+index 1cc6bb1c5d90..02f23c67bd2d 100644
+--- a/arch/arm64/configs/qcom_defconfig
++++ b/arch/arm64/configs/qcom_defconfig
+@@ -1,3 +1,4 @@
++CONFIG_LOCALVERSION="-qli-1.6-ver.1.2.1"
+ CONFIG_SYSVIPC=y
+ CONFIG_POSIX_MQUEUE=y
+ CONFIG_AUDIT=y
+@@ -15,7 +16,6 @@ CONFIG_RCU_EXPERT=y
+ CONFIG_RCU_NOCB_CPU=y
+ CONFIG_IKCONFIG=y
+ CONFIG_IKCONFIG_PROC=y
+-CONFIG_LOCALVERSION="-perf"
+ CONFIG_LOG_BUF_SHIFT=18
+ CONFIG_UCLAMP_TASK=y
+ CONFIG_CGROUP_FAVOR_DYNMODS=y
+@@ -43,6 +43,7 @@ CONFIG_SCHED_SMT=y
+ CONFIG_PARAVIRT=y
+ CONFIG_ARM64_SW_TTBR0_PAN=y
+ CONFIG_COMPAT=y
++CONFIG_ARM64_PMEM=y
+ CONFIG_RANDOMIZE_BASE=y
+ CONFIG_HIBERNATION=y
+ CONFIG_PM_AUTOSLEEP=y
+@@ -92,13 +93,30 @@ CONFIG_NETFILTER=y
+ CONFIG_BRIDGE_NETFILTER=m
+ CONFIG_NF_CONNTRACK=m
+ CONFIG_NF_CONNTRACK_EVENTS=y
+-CONFIG_NETFILTER_XT_MARK=m
++CONFIG_NF_TABLES=y
++CONFIG_NF_TABLES_INET=y
++CONFIG_NF_TABLES_NETDEV=y
++CONFIG_NFT_FLOW_OFFLOAD=m
++CONFIG_NFT_NAT=m
++CONFIG_NFT_QUEUE=m
++CONFIG_NF_FLOW_TABLE=m
++CONFIG_NETFILTER_XTABLES_COMPAT=y
+ CONFIG_NETFILTER_XT_TARGET_CHECKSUM=m
++CONFIG_NETFILTER_XT_TARGET_CLASSIFY=m
+ CONFIG_NETFILTER_XT_TARGET_LOG=m
++CONFIG_NETFILTER_XT_TARGET_NFQUEUE=m
+ CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=m
++CONFIG_NETFILTER_XT_MATCH_BPF=m
+ CONFIG_NETFILTER_XT_MATCH_COMMENT=m
+ CONFIG_NETFILTER_XT_MATCH_CONNTRACK=m
++CONFIG_NETFILTER_XT_MATCH_IPRANGE=m
+ CONFIG_NETFILTER_XT_MATCH_IPVS=m
++CONFIG_NETFILTER_XT_MATCH_MAC=m
++CONFIG_NETFILTER_XT_MATCH_MARK=m
++CONFIG_NETFILTER_XT_MATCH_MULTIPORT=m
++CONFIG_NETFILTER_XT_MATCH_OWNER=m
++CONFIG_NETFILTER_XT_MATCH_PKTTYPE=m
++CONFIG_NETFILTER_XT_MATCH_U32=m
+ CONFIG_IP_VS=m
+ CONFIG_IP_NF_IPTABLES=m
+ CONFIG_IP_NF_FILTER=m
+@@ -113,6 +131,18 @@ CONFIG_IP6_NF_TARGET_REJECT=m
+ CONFIG_IP6_NF_MANGLE=m
+ CONFIG_IP6_NF_NAT=m
+ CONFIG_IP6_NF_TARGET_MASQUERADE=m
++CONFIG_BRIDGE_NF_EBTABLES=m
++CONFIG_BRIDGE_EBT_BROUTE=m
++CONFIG_BRIDGE_EBT_T_FILTER=m
++CONFIG_BRIDGE_EBT_802_3=m
++CONFIG_BRIDGE_EBT_ARP=m
++CONFIG_BRIDGE_EBT_IP=m
++CONFIG_BRIDGE_EBT_IP6=m
++CONFIG_BRIDGE_EBT_LIMIT=m
++CONFIG_BRIDGE_EBT_MARK=m
++CONFIG_BRIDGE_EBT_PKTTYPE=m
++CONFIG_BRIDGE_EBT_VLAN=m
++CONFIG_BRIDGE_EBT_MARK_T=m
+ CONFIG_BRIDGE=m
+ CONFIG_BRIDGE_VLAN_FILTERING=y
+ CONFIG_NET_DSA=m
+@@ -124,20 +154,20 @@ CONFIG_NET_SCH_CBS=m
+ CONFIG_NET_SCH_ETF=m
+ CONFIG_NET_SCH_TAPRIO=m
+ CONFIG_NET_SCH_MQPRIO=m
+-CONFIG_NET_ACT_SKBEDIT=m
+ CONFIG_NET_SCH_INGRESS=m
+ CONFIG_NET_CLS_BASIC=m
+-CONFIG_NET_CLS_FLOWER=m
+-CONFIG_NET_CLS_ACT=y
+ CONFIG_NET_CLS_ROUTE4=m
+ CONFIG_NET_CLS_FW=m
+ CONFIG_NET_CLS_U32=m
+-CONFIG_NET_CLS_BPF=m
+ CONFIG_NET_CLS_FLOW=m
+ CONFIG_NET_CLS_CGROUP=m
++CONFIG_NET_CLS_BPF=m
++CONFIG_NET_CLS_FLOWER=m
+ CONFIG_NET_CLS_MATCHALL=m
++CONFIG_NET_CLS_ACT=y
+ CONFIG_NET_ACT_GACT=m
+ CONFIG_NET_ACT_MIRRED=m
++CONFIG_NET_ACT_SKBEDIT=m
+ CONFIG_NET_ACT_GATE=m
+ CONFIG_VSOCKETS=y
+ CONFIG_QRTR_SMD=m
+@@ -163,6 +193,7 @@ CONFIG_NL80211_TESTMODE=y
+ CONFIG_CFG80211_CERTIFICATION_ONUS=y
+ CONFIG_MAC80211=m
+ CONFIG_MAC80211_LEDS=y
++CONFIG_MAC80211_DEBUGFS=y
+ CONFIG_RFKILL=m
+ CONFIG_NET_9P=y
+ CONFIG_NET_9P_VIRTIO=y
+@@ -180,20 +211,30 @@ CONFIG_HOTPLUG_PCI_ACPI=y
+ CONFIG_PCI_HOST_GENERIC=y
+ CONFIG_PCIE_DW_PLAT_HOST=y
+ CONFIG_PCIE_QCOM=y
++CONFIG_QCOM_QPS615_PCIE_SWITCH=y
+ CONFIG_PCI_ENDPOINT=y
+ CONFIG_PCI_ENDPOINT_CONFIGFS=y
+ CONFIG_PCI_EPF_TEST=m
+ CONFIG_DEVTMPFS=y
+ CONFIG_DEVTMPFS_MOUNT=y
+ CONFIG_FW_LOADER_USER_HELPER=y
++CONFIG_FW_DEVLINK_SYNC_STATE_TIMEOUT=y
+ CONFIG_MHI_BUS_PCI_GENERIC=m
+ CONFIG_MHI_BUS_EP=y
+ CONFIG_ARM_SCMI_PROTOCOL=y
+ CONFIG_ARM_SCPI_PROTOCOL=y
+ # CONFIG_ARM_SCPI_POWER_DOMAIN is not set
+ # CONFIG_DMIID is not set
+-# CONFIG_EFI_DISABLE_RUNTIME is not set
++CONFIG_QCOM_SCM_ADDON=y
++CONFIG_QCOM_TZMEM_MODE_SHMBRIDGE=y
++CONFIG_QTI_TZ_LOG=m
++CONFIG_QCOM_SI_CORE=m
++CONFIG_QCOM_SI_CORE_WQ=y
++CONFIG_QCOM_SI_CORE_MEM_OBJECT=m
++CONFIG_QCOM_SI_CORE_XTS=m
+ CONFIG_GNSS=m
++CONFIG_MTD=y
++CONFIG_MTD_SPI_NOR=y
+ # CONFIG_PNP_DEBUG_MESSAGES is not set
+ CONFIG_ZRAM=m
+ CONFIG_BLK_DEV_LOOP=y
+@@ -201,11 +242,12 @@ CONFIG_BLK_DEV_NBD=m
+ CONFIG_VIRTIO_BLK=y
+ CONFIG_BLK_DEV_NVME=m
+ CONFIG_QCOM_COINCELL=m
++CONFIG_QCOM_DCC=y
+ CONFIG_QCOM_FASTRPC=m
+ CONFIG_SRAM=y
++CONFIG_EEPROM_AT24=y
+ # CONFIG_SCSI_PROC_FS is not set
+ CONFIG_BLK_DEV_SD=y
+-CONFIG_BLK_DEV_BSG=y
+ CONFIG_SCSI_SAS_ATA=y
+ CONFIG_SCSI_HISI_SAS=y
+ CONFIG_SCSI_HISI_SAS_PCI=y
+@@ -229,12 +271,19 @@ CONFIG_VETH=m
+ CONFIG_VIRTIO_NET=y
+ CONFIG_MHI_NET=m
+ CONFIG_ATL1C=m
++CONFIG_IXGBE=y
++CONFIG_IXGBEVF=y
+ CONFIG_QCOM_EMAC=m
+ CONFIG_RMNET=m
++CONFIG_R8169=y
++CONFIG_STMMAC_ETH=m
++CONFIG_STMMAC_SELFTESTS=y
+ CONFIG_QCOM_IPA=m
++CONFIG_AQUANTIA_PHY=y
++CONFIG_MARVELL_PHY=m
+ CONFIG_AT803X_PHY=m
+-CONFIG_REALTEK_PHY=m
+ CONFIG_CAN_MCP251XFD=m
++CONFIG_CAN_GS_USB=m
+ CONFIG_MDIO_BITBANG=m
+ CONFIG_MDIO_GPIO=m
+ CONFIG_MDIO_BUS_MUX_MULTIPLEXER=m
+@@ -249,19 +298,22 @@ CONFIG_WCN36XX=m
+ CONFIG_ATH11K=m
+ CONFIG_ATH11K_AHB=m
+ CONFIG_ATH11K_PCI=m
++CONFIG_ATH11K_DEBUGFS=y
++CONFIG_RTW88=m
++CONFIG_RTW88_8723DE=m
+ CONFIG_WWAN=m
+ # CONFIG_WWAN_DEBUGFS is not set
+ CONFIG_MHI_WWAN_CTRL=m
+ CONFIG_MHI_WWAN_MBIM=m
+ CONFIG_INPUT_MOUSEDEV=y
+ CONFIG_INPUT_EVDEV=y
+-CONFIG_INPUT_UINPUT=y
+ CONFIG_KEYBOARD_ADC=m
+ CONFIG_KEYBOARD_GPIO=y
+ CONFIG_INPUT_TOUCHSCREEN=y
+ CONFIG_INPUT_MISC=y
+ CONFIG_INPUT_PM8941_PWRKEY=y
+ CONFIG_INPUT_PM8XXX_VIBRATOR=y
++CONFIG_INPUT_UINPUT=y
+ CONFIG_INPUT_PWM_BEEPER=m
+ CONFIG_INPUT_PWM_VIBRA=m
+ # CONFIG_SERIO_SERPORT is not set
+@@ -287,11 +339,13 @@ CONFIG_IPMI_DEVICE_INTERFACE=m
+ CONFIG_IPMI_SI=m
+ CONFIG_HW_RANDOM=y
+ CONFIG_HW_RANDOM_VIRTIO=y
++# CONFIG_HW_RANDOM_ARM_SMCCC_TRNG is not set
+ # CONFIG_DEVMEM is not set
+ CONFIG_TCG_TPM=y
+-CONFIG_TCG_TIS=m
+-CONFIG_TCG_TIS_SPI=m
+-CONFIG_I2C=y
++CONFIG_TCG_TIS=y
++CONFIG_TCG_TIS_SPI=y
++CONFIG_TCG_TIS_SPI_CR50=y
++CONFIG_MSM_RDBG=m
+ CONFIG_I2C_CHARDEV=y
+ CONFIG_I2C_MUX=y
+ CONFIG_I2C_MUX_PCA954x=y
+@@ -309,6 +363,7 @@ CONFIG_SPI_QCOM_GENI=m
+ CONFIG_SPI_SPIDEV=m
+ CONFIG_SPMI=y
+ CONFIG_PINCTRL_SINGLE=y
++CONFIG_PINCTRL_SX150X=y
+ CONFIG_PINCTRL_MSM=y
+ CONFIG_PINCTRL_IPQ5332=y
+ CONFIG_PINCTRL_IPQ8074=y
+@@ -344,19 +399,20 @@ CONFIG_PINCTRL_SM8350=y
+ CONFIG_PINCTRL_SM8450=y
+ CONFIG_PINCTRL_SM8550=y
+ CONFIG_PINCTRL_SM8650=y
+-CONFIG_PINCTRL_SX150X=y
+ CONFIG_PINCTRL_X1E80100=y
+ CONFIG_PINCTRL_QCOM_SPMI_PMIC=y
+ CONFIG_PINCTRL_LPASS_LPI=m
++CONFIG_PINCTRL_QCS8300_LPASS_LPI=m
+ CONFIG_PINCTRL_SC7280_LPASS_LPI=m
+ CONFIG_PINCTRL_SM8250_LPASS_LPI=m
+ CONFIG_PINCTRL_SM8450_LPASS_LPI=m
+ CONFIG_PINCTRL_SC8280XP_LPASS_LPI=m
+ CONFIG_PINCTRL_SM8550_LPASS_LPI=m
+-CONFIG_GPIO_PCA953X=y
+-CONFIG_GPIO_PCA953X_IRQ=y
++CONFIG_PINCTRL_SA8775P_LPASS_LPI=m
+ CONFIG_GPIO_PL061=y
+ CONFIG_GPIO_WCD934X=m
++CONFIG_GPIO_PCA953X=y
++CONFIG_GPIO_PCA953X_IRQ=y
+ CONFIG_POWER_RESET_MSM=y
+ CONFIG_POWER_RESET_QCOM_PON=m
+ CONFIG_POWER_RESET_SYSCON=y
+@@ -366,6 +422,7 @@ CONFIG_SENSORS_ARM_SCMI=y
+ CONFIG_SENSORS_ARM_SCPI=y
+ CONFIG_SENSORS_GPIO_FAN=m
+ CONFIG_SENSORS_PWM_FAN=m
++CONFIG_SENSORS_EMC2305=y
+ CONFIG_SENSORS_AMC6821=y
+ CONFIG_THERMAL_NETLINK=y
+ CONFIG_THERMAL_EMERGENCY_POWEROFF_DELAY_MS=10000
+@@ -378,23 +435,33 @@ CONFIG_THERMAL_EMULATION=y
+ CONFIG_GENERIC_ADC_THERMAL=m
+ CONFIG_QCOM_TSENS=y
+ CONFIG_QCOM_SPMI_ADC_TM5=m
++CONFIG_QCOM_SPMI_MBG_TM=m
+ CONFIG_QCOM_SPMI_TEMP_ALARM=y
+ CONFIG_QCOM_LMH=m
++CONFIG_QCOM_QMI_COOLING=m
++CONFIG_QTI_BCL_PMIC5=y
++CONFIG_QTI_DEVFREQ_CDEV=m
+ CONFIG_WATCHDOG=y
+ CONFIG_WATCHDOG_SYSFS=y
+ CONFIG_WATCHDOG_PRETIMEOUT_GOV=y
+ CONFIG_WATCHDOG_PRETIMEOUT_DEFAULT_GOV_NOOP=y
+ CONFIG_ARM_SBSA_WATCHDOG=y
++CONFIG_QCOM_WDT=y
++CONFIG_MFD_I2C_PMIC=y
+ CONFIG_MFD_SPMI_PMIC=y
+ CONFIG_MFD_WCD934X=m
+ CONFIG_REGULATOR_FIXED_VOLTAGE=y
++CONFIG_REGULATOR_DEBUG_CONTROL=y
+ CONFIG_REGULATOR_GPIO=y
++CONFIG_REGULATOR_PROXY_CONSUMER=y
+ CONFIG_REGULATOR_PWM=y
++CONFIG_REGULATOR_QCOM_PM8008=y
+ CONFIG_REGULATOR_QCOM_REFGEN=y
+ CONFIG_REGULATOR_QCOM_RPMH=y
+ CONFIG_REGULATOR_QCOM_SMD_RPM=y
+ CONFIG_REGULATOR_QCOM_SPMI=y
+ CONFIG_REGULATOR_VCTRL=m
++CONFIG_REGULATOR_QPNP_LCDB=y
+ CONFIG_RC_CORE=m
+ CONFIG_RC_DECODERS=y
+ CONFIG_RC_DEVICES=y
+@@ -410,13 +477,11 @@ CONFIG_USB_VIDEO_CLASS=m
+ CONFIG_V4L_PLATFORM_DRIVERS=y
+ CONFIG_SDR_PLATFORM_DRIVERS=y
+ CONFIG_V4L_MEM2MEM_DRIVERS=y
+-CONFIG_VIDEO_IMX412=m
+ CONFIG_VIDEO_QCOM_CAMSS=m
+ CONFIG_VIDEO_QCOM_VENUS=m
+ CONFIG_VIDEO_QCOM_IRIS=m
++CONFIG_VIDEO_IMX412=m
+ CONFIG_DRM=m
+-CONFIG_DRM_LONTIUM_LT9611UXC=m
+-CONFIG_DRM_ANALOGIX_ANX7625=m
+ # CONFIG_DRM_FBDEV_EMULATION is not set
+ CONFIG_DRM_HDLCD=m
+ CONFIG_DRM_MSM=m
+@@ -428,11 +493,15 @@ CONFIG_DRM_PANEL_SIMPLE=m
+ CONFIG_DRM_PANEL_EDP=m
+ CONFIG_DRM_PANEL_NOVATEK_NT36672E=m
+ CONFIG_DRM_DISPLAY_CONNECTOR=m
++CONFIG_DRM_LONTIUM_LT9211C=m
++CONFIG_DRM_LONTIUM_LT9611UXC=m
++CONFIG_DRM_ANALOGIX_ANX7625=m
+ CONFIG_FB=y
+ CONFIG_FB_EFI=y
+ CONFIG_FB_MODE_HELPERS=y
+ CONFIG_BACKLIGHT_CLASS_DEVICE=y
+ CONFIG_BACKLIGHT_PWM=m
++CONFIG_BACKLIGHT_QCOM_WLED=y
+ CONFIG_FRAMEBUFFER_CONSOLE=y
+ CONFIG_FRAMEBUFFER_CONSOLE_DETECT_PRIMARY=y
+ CONFIG_LOGO=y
+@@ -444,17 +513,23 @@ CONFIG_SND_ALOOP=m
+ CONFIG_SND_USB_AUDIO=m
+ CONFIG_SND_USB_AUDIO_MIDI_V2=y
+ CONFIG_SND_SOC=y
++CONFIG_SND_SOC_FSL_SAI=y
+ CONFIG_SND_SOC_QCOM=y
+ CONFIG_SND_SOC_APQ8016_SBC=m
+ CONFIG_SND_SOC_QDSP6=y
+ CONFIG_SND_SOC_MSM8996=m
++CONFIG_SND_SOC_QCS9100=m
+ CONFIG_SND_SOC_SDM845=m
+ CONFIG_SND_SOC_SM8250=m
+ CONFIG_SND_SOC_SC7180=m
+ CONFIG_SND_SOC_SC7280=m
+ CONFIG_SND_SOC_QCM6490=m
++CONFIG_SND_SOC_MSM_STUB=y
+ CONFIG_SND_SOC_MSM8916_WCD_ANALOG=m
+ CONFIG_SND_SOC_MSM8916_WCD_DIGITAL=m
++CONFIG_SND_SOC_TLV320AIC23_I2C=y
++CONFIG_SND_SOC_TLV320AIC31XX=y
++CONFIG_SND_SOC_TLV320AIC3X_I2C=y
+ CONFIG_SND_SOC_WCD9335=m
+ CONFIG_SND_SOC_WCD934X=m
+ CONFIG_SND_SOC_WCD937X_SDW=y
+@@ -504,6 +579,7 @@ CONFIG_USB_SERIAL_CP210X=m
+ CONFIG_USB_SERIAL_FTDI_SIO=m
+ CONFIG_USB_SERIAL_OPTION=m
+ CONFIG_USB_QCOM_EUD=m
++CONFIG_USB_HUB_USB5807=m
+ CONFIG_USB_ONBOARD_HUB=m
+ CONFIG_NOP_USB_XCEIV=y
+ CONFIG_USB_ULPI=y
+@@ -526,6 +602,7 @@ CONFIG_TYPEC_TCPM=m
+ CONFIG_TYPEC_TCPCI=m
+ CONFIG_TYPEC_UCSI=m
+ CONFIG_UCSI_PMIC_GLINK=m
++CONFIG_TYPEC_HD3SS3220=m
+ CONFIG_TYPEC_MUX_FSA4480=m
+ CONFIG_TYPEC_MUX_GPIO_SBU=m
+ CONFIG_TYPEC_MUX_NB7VPQ904M=m
+@@ -561,6 +638,7 @@ CONFIG_LEDS_TRIGGER_PANIC=y
+ CONFIG_LEDS_TRIGGER_PATTERN=y
+ CONFIG_EDAC=y
+ CONFIG_RTC_CLASS=y
++CONFIG_RTC_DRV_PCF85063=y
+ CONFIG_RTC_DRV_EFI=y
+ CONFIG_RTC_DRV_PL031=y
+ CONFIG_RTC_DRV_PM8XXX=m
+@@ -572,10 +650,21 @@ CONFIG_QCOM_HIDMA_MGMT=y
+ CONFIG_QCOM_HIDMA=y
+ CONFIG_DMABUF_HEAPS_SYSTEM=y
+ CONFIG_DMABUF_HEAPS_CMA=y
++CONFIG_QCOM_DMABUF_HEAPS=y
++CONFIG_QCOM_DMABUF_HEAPS_SYSTEM=y
++CONFIG_QCOM_DMABUF_HEAPS_SYSTEM_SECURE=y
++CONFIG_QCOM_DMABUF_HEAPS_CMA=y
+ CONFIG_UIO=y
+ CONFIG_VFIO=y
+ CONFIG_VFIO_PCI=y
+ CONFIG_VFIO_PLATFORM=m
++CONFIG_VIRT_DRIVERS=y
++CONFIG_GUNYAH=y
++CONFIG_GUNYAH_VCPU=y
++CONFIG_GUNYAH_IRQFD=y
++CONFIG_GUNYAH_IOEVENTFD=y
++CONFIG_GUNYAH_DRIVERS=y
++CONFIG_GH_VIRT_WATCHDOG=y
+ CONFIG_VIRTIO_PCI=y
+ CONFIG_VIRTIO_BALLOON=y
+ CONFIG_VIRTIO_MMIO=y
+@@ -613,13 +702,11 @@ CONFIG_QCS_GCC_615=y
+ CONFIG_QCS_GPUCC_615=m
+ CONFIG_QCS_VIDEOCC_615=m
+ CONFIG_QCS_GCC_8300=y
++CONFIG_SA_CAMCC_8775P=m
+ CONFIG_SC_CAMCC_7280=y
++CONFIG_SA_DISPCC_8775P=m
+ CONFIG_SC_DISPCC_7280=y
+ CONFIG_SC_DISPCC_8280XP=m
+-CONFIG_SA_GCC_8775P=y
+-CONFIG_SA_CAMCC_8775P=m
+-CONFIG_SA_DISPCC_8775P=m
+-CONFIG_SA_VIDEOCC_8775P=m
+ CONFIG_SA_GPUCC_8775P=y
+ CONFIG_SC_GCC_7180=y
+ CONFIG_SC_GCC_8180X=y
+@@ -643,7 +730,6 @@ CONFIG_SM_DISPCC_8650=y
+ CONFIG_SM_GCC_6115=y
+ CONFIG_SM_GCC_8350=y
+ CONFIG_SM_GCC_8450=y
+-CONFIG_SM_GCC_8650=y
+ CONFIG_SM_GPUCC_6115=m
+ CONFIG_SM_GPUCC_8150=y
+ CONFIG_SM_GPUCC_8250=y
+@@ -651,6 +737,7 @@ CONFIG_SM_GPUCC_8550=y
+ CONFIG_SM_GPUCC_8650=y
+ CONFIG_SM_TCSRCC_8550=y
+ CONFIG_SM_TCSRCC_8650=y
++CONFIG_SA_VIDEOCC_8775P=m
+ CONFIG_SM_VIDEOCC_8250=y
+ CONFIG_SM_VIDEOCC_8550=y
+ CONFIG_QCOM_HFPLL=y
+@@ -687,7 +774,10 @@ CONFIG_QCOM_COMMAND_DB=y
+ CONFIG_QCOM_CPR=y
+ CONFIG_QCOM_GENI_SE=y
+ CONFIG_QCOM_LLCC=m
++CONFIG_QCOM_MEMORY_DUMP_V2=y
+ CONFIG_QCOM_OCMEM=m
++CONFIG_QCOM_PANEL_EVENT_NOTIFIER=m
++CONFIG_QCOM_PMIC_PDCHARGER_ULOG=y
+ CONFIG_QCOM_PMIC_GLINK=m
+ CONFIG_QCOM_RMTFS_MEM=m
+ CONFIG_QCOM_RPMH=y
+@@ -697,12 +787,18 @@ CONFIG_QCOM_SMEM=y
+ CONFIG_QCOM_SMD_RPM=y
+ CONFIG_QCOM_SMP2P=y
+ CONFIG_QCOM_SMSM=y
++CONFIG_QCOM_SMP2P_SLEEPSTATE=y
+ CONFIG_QCOM_SOCINFO=m
+ CONFIG_QCOM_SPM=m
+ CONFIG_QCOM_STATS=m
+ CONFIG_QCOM_WCNSS_CTRL=m
+ CONFIG_QCOM_APR=y
+ CONFIG_QCOM_ICC_BWMON=m
++CONFIG_QCOM_WDT_CORE=y
++CONFIG_QCOM_SOC_DEBUG=y
++CONFIG_QCOM_SECURE_BUFFER=y
++CONFIG_QCOM_MEM_BUF=y
++CONFIG_USB_F_QDSS=m
+ CONFIG_DEVFREQ_GOV_USERSPACE=y
+ CONFIG_DEVFREQ_GOV_PASSIVE=m
+ CONFIG_EXTCON_USB_GPIO=y
+@@ -710,6 +806,7 @@ CONFIG_MEMORY=y
+ CONFIG_IIO=y
+ CONFIG_QCOM_SPMI_VADC=m
+ CONFIG_QCOM_SPMI_ADC5=y
++CONFIG_QCOM_SPMI_ADC5_GEN3=m
+ CONFIG_PWM=y
+ CONFIG_QCOM_PDC=y
+ CONFIG_QCOM_MPM=y
+@@ -725,6 +822,7 @@ CONFIG_PHY_QCOM_EUSB2_REPEATER=m
+ CONFIG_PHY_QCOM_USB_SNPS_FEMTO_V2=y
+ CONFIG_PHY_QCOM_USB_HS_28NM=m
+ CONFIG_PHY_QCOM_USB_SS=m
++CONFIG_PHY_QCOM_SGMII_ETH=m
+ CONFIG_POWERCAP=y
+ CONFIG_IDLE_INJECT=y
+ CONFIG_ARM_CCI_PMU=m
+@@ -741,6 +839,7 @@ CONFIG_ARM_CORESIGHT_PMU_ARCH_SYSTEM_PMU=m
+ CONFIG_NVMEM_QCOM_QFPROM=y
+ CONFIG_NVMEM_RMEM=m
+ CONFIG_NVMEM_SPMI_SDAM=m
++CONFIG_STM_PROTO_OST=m
+ CONFIG_STM_SOURCE_CONSOLE=m
+ CONFIG_STM_SOURCE_HEARTBEAT=m
+ CONFIG_STM_SOURCE_FTRACE=m
+@@ -780,11 +879,9 @@ CONFIG_INTERCONNECT_QCOM_SM8650=y
+ CONFIG_INTERCONNECT_QCOM_X1E80100=y
+ CONFIG_COUNTER=m
+ CONFIG_HTE=y
+-# CONFIG_EXT2_FS is not set
+ CONFIG_EXT3_FS=y
+ CONFIG_EXT4_FS_POSIX_ACL=y
+ CONFIG_EXT4_FS_SECURITY=y
+-CONFIG_EXT4_USE_FOR_EXT2=y
+ CONFIG_FS_ENCRYPTION=y
+ CONFIG_FS_ENCRYPTION_INLINE_CRYPT=y
+ CONFIG_FANOTIFY=y
+@@ -798,7 +895,6 @@ CONFIG_VFAT_FS=y
+ CONFIG_TMPFS_POSIX_ACL=y
+ CONFIG_HUGETLBFS=y
+ CONFIG_EFIVAR_FS=y
+-CONFIG_EFI_PARTITION=y
+ CONFIG_NFS_FS=y
+ CONFIG_NFS_V4=y
+ CONFIG_NFS_V4_1=y
+@@ -837,7 +933,6 @@ CONFIG_CRYPTO_AES_ARM64_CE_CCM=y
+ CONFIG_CRYPTO_DEV_QCE=m
+ CONFIG_CRYPTO_DEV_QCOM_RNG=m
+ CONFIG_CRYPTO_DEV_CCREE=m
+-# CONFIG_HW_RANDOM_ARM_SMCCC_TRNG is not set
+ CONFIG_INDIRECT_PIO=y
+ CONFIG_TRACE_MMIO_ACCESS=y
+ CONFIG_CRC_CCITT=m
+@@ -850,12 +945,11 @@ CONFIG_CONSOLE_LOGLEVEL_DEFAULT=6
+ CONFIG_DYNAMIC_DEBUG_CORE=y
+ CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT=y
+ CONFIG_MAGIC_SYSRQ=y
+-CONFIG_DEBUG_FS=y
+-CONFIG_PAGE_EXTENSION=y
+ CONFIG_PAGE_OWNER=y
+ CONFIG_KASAN=y
+ CONFIG_KASAN_HW_TAGS=y
+ CONFIG_PANIC_ON_OOPS=y
++CONFIG_PANIC_TIMEOUT=-1
+ CONFIG_SCHEDSTATS=y
+ CONFIG_CORESIGHT=m
+ CONFIG_CORESIGHT_LINK_AND_SINK_TMC=m
+@@ -863,54 +957,8 @@ CONFIG_CORESIGHT_CATU=m
+ CONFIG_CORESIGHT_SINK_TPIU=m
+ CONFIG_CORESIGHT_SINK_ETBV10=m
+ CONFIG_CORESIGHT_STM=m
++CONFIG_CORESIGHT_REMOTE_ETM=m
+ CONFIG_CORESIGHT_CTI=m
++CONFIG_CORESIGHT_TGU=m
+ CONFIG_CORESIGHT_TPDM=m
+ CONFIG_CORESIGHT_DUMMY=m
+-CONFIG_NFT_NAT=y
+-CONFIG_NF_NAT=y
+-CONFIG_NF_TABLES=y
+-CONFIG_NF_TABLES_INET=y
+-CONFIG_NETFILTER_NETLINK_QUEUE=m
+-CONFIG_NF_FLOW_TABLE=m
+-CONFIG_NFT_FLOW_OFFLOAD=m
+-CONFIG_NFT_QUEUE=m
+-CONFIG_NETFILTER_XTABLES=m
+-CONFIG_NETFILTER_XTABLES_COMPAT=y
+-CONFIG_NETFILTER_XT_TARGET_CLASSIFY=m
+-CONFIG_NETFILTER_XT_TARGET_NFQUEUE=m
+-CONFIG_NETFILTER_XT_MATCH_BPF=m
+-CONFIG_NETFILTER_XT_MATCH_IPRANGE=m
+-CONFIG_NETFILTER_XT_MATCH_MAC=m
+-CONFIG_NETFILTER_XT_MATCH_MARK=m
+-CONFIG_NETFILTER_XT_MATCH_MULTIPORT=m
+-CONFIG_NETFILTER_XT_MATCH_OWNER=m
+-CONFIG_NETFILTER_XT_MATCH_PKTTYPE=m
+-CONFIG_NETFILTER_XT_MATCH_U32=m
+-CONFIG_BRIDGE_NF_EBTABLES=m
+-CONFIG_BRIDGE_EBT_BROUTE=m
+-CONFIG_BRIDGE_EBT_T_FILTER=m
+-CONFIG_BRIDGE_EBT_802_3=m
+-CONFIG_BRIDGE_EBT_ARP=m
+-CONFIG_BRIDGE_EBT_IP=m
+-CONFIG_BRIDGE_EBT_IP6=m
+-CONFIG_BRIDGE_EBT_LIMIT=m
+-CONFIG_BRIDGE_EBT_MARK=m
+-CONFIG_BRIDGE_EBT_PKTTYPE=m
+-CONFIG_BRIDGE_EBT_VLAN=m
+-CONFIG_BRIDGE_EBT_MARK_T=m
+-CONFIG_NF_TABLES_NETDEV=y
+-CONFIG_STMMAC_ETH=m
+-CONFIG_STMMAC_SELFTESTS=y
+-CONFIG_MARVELL_PHY=m
+-CONFIG_PHY_QCOM_SGMII_ETH=m
+-CONFIG_ATH11K_DEBUGFS=y
+-CONFIG_MAC80211_DEBUGFS=y
+-CONFIG_ARM64_PMEM=y
+-CONFIG_IXGBE=y
+-CONFIG_IXGBEVF=y
+-CONFIG_AQUANTIA_PHY=y
+-CONFIG_QCOM_TZMEM_MODE_SHMBRIDGE=y
+-CONFIG_TYPEC_HD3SS3220=m
+-CONFIG_FW_DEVLINK_SYNC_STATE_TIMEOUT=y
+-CONFIG_EEPROM_AT24=m
+-CONFIG_DRM_LONTIUM_LT9211C=m
+\ No newline at end of file

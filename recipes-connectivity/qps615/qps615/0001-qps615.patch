@@ -1,0 +1,101 @@
+From bc90bdefa66abc3635eec3879cf1c94af3cb808a Mon Sep 17 00:00:00 2001
+From: FoxYang12 <foxyang@aaeon.com.tw>
+Date: Mon, 20 Apr 2026 17:39:04 +0800
+Subject: [PATCH] qps615
+
+---
+ drivers/qps615/src/Makefile        |  3 +++
+ drivers/qps615/src/tc956x_qcom.c   | 33 ++++++++++++++++++++++++++++++
+ drivers/qps615/src/tc956xmac_inc.h |  4 ++--
+ 3 files changed, 38 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/qps615/src/Makefile b/drivers/qps615/src/Makefile
+index f467104..7138132 100755
+--- a/drivers/qps615/src/Makefile
++++ b/drivers/qps615/src/Makefile
+@@ -76,8 +76,11 @@ ifeq ($(DMA_OFFLOAD), 1)
+ 	tc956x_pcie_eth-y += tc956x_ipa_intf.o
+ endif	 
+ 
++TC956XMAC_SELFTESTS := 1
++
+ ifeq ($(TC956XMAC_SELFTESTS), 1)
+ 	tc956x_pcie_eth-y += tc956xmac_selftests.o
++	EXTRA_CFLAGS+=-DCONFIG_TC956XMAC_SELFTESTS
+ endif
+ #TC956X_Host_Driver-industrial_limited_tested_20241022_V_04-00-01-QPSSW-210.patch
+ ccflags-y := -Wmissing-prototypes
+diff --git a/drivers/qps615/src/tc956x_qcom.c b/drivers/qps615/src/tc956x_qcom.c
+index 15e1e7e..b0211a8 100644
+--- a/drivers/qps615/src/tc956x_qcom.c
++++ b/drivers/qps615/src/tc956x_qcom.c
+@@ -23,6 +23,8 @@ struct tc956x_qcom_priv {
+ 	int wol_irq;
+ 	bool has_always_on_supplies;
+ 	struct gpio_desc *phy_rst_gpio_som;
++	struct tc956xmac_priv *priv;
++	struct gpio_chip gc;
+ };
+ 
+ #define to_priv(priv) \
+@@ -150,6 +152,20 @@ err_pinctrl_get:
+ 	return -EINVAL;
+ }
+ 
++// Set the value of a GPIO pin
++static void tc956x_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
++{
++    struct tc956x_qcom_priv *qpriv = gpiochip_get_data(gc);
++    struct tc956xmac_priv *priv = qpriv->priv;
++
++    if (offset >= gc->ngpio)
++        return;
++
++    dev_err(priv->device, "%s: %u=%d\n", __func__, offset, value);
++
++    tc956x_GPIO_OutputConfigPin(priv, offset, value);
++}
++
+ int tc956x_platform_probe(struct tc956xmac_priv *priv,
+ 			  struct tc956xmac_resources *res)
+ {
+@@ -175,6 +191,23 @@ int tc956x_platform_probe(struct tc956xmac_priv *priv,
+ 
+ 	priv->plat_priv = qpriv;
+ 
++	qpriv->priv = priv;
++
++	qpriv->gc.label = "tc956x-gpio";
++	qpriv->gc.owner = THIS_MODULE;
++	qpriv->gc.set   = tc956x_gpio_set;
++	qpriv->gc.base = -1;
++	qpriv->gc.ngpio = GPIO_13 + 1;
++	qpriv->gc.can_sleep = false;
++
++	// Register the GPIO chip
++    ret = devm_gpiochip_add_data(priv->device, &qpriv->gc, qpriv);
++    if (ret) {
++        pr_err("Failed to register gpio_chip: %d\n", ret);
++    }
++
++    pr_info("tc956xmac: registered %d virtual GPIOs\n", GPIO_13);
++
+ 	ret = tc956x_platform_of_parse(priv->device, qpriv);
+ 	if (ret) {
+ 		dev_err(priv->device, "Failed to parse platform device tree\n");
+diff --git a/drivers/qps615/src/tc956xmac_inc.h b/drivers/qps615/src/tc956xmac_inc.h
+index f900b91..e28f374 100644
+--- a/drivers/qps615/src/tc956xmac_inc.h
++++ b/drivers/qps615/src/tc956xmac_inc.h
+@@ -68,9 +68,9 @@
+ #include "tc956xmac_ioctl.h"
+ 
+ //#define TC956X
+-//#define TC956X_IOCTL_REG_RD_WR_ENABLE
++#define TC956X_IOCTL_REG_RD_WR_ENABLE
+ 
+-//#define TC956X_PCIE_GEN3_SETTING
++#define TC956X_PCIE_GEN3_SETTING
+ //#define TC956X_PCIE_DISABLE_DSP1 /*Enable this macro to disable DSP1 port*/
+ //#define TC956X_PCIE_DISABLE_DSP2 /*Enable this macro to disable DSP2 port*/
+ /* Enable for PORT0 interrupt mode, if commented polling mode */

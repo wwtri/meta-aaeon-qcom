@@ -36,7 +36,7 @@ We can then build the demo image with:
 
     $bitbake qcom-multimedia-image
 
-# Flashing the image to eMMC
+# Flashing the image to UFS
 
 
 
@@ -46,16 +46,16 @@ https://softwarecenter.qualcomm.com/catalog/item/Qualcomm_Device_Loader
 ## Prepairing the carrier
 For flashing on AAeons carrier ECB-960T make sure to set switch SW5:
 
-SW5
-***************
-OFF ON ON 
-***************
+    SW5
+    ***************
+    OFF ON ON 
+    ***************
 
-J16
-********************
-Short pin pin3->pin5
-short pin pin4->pin6
-*********************
+    J16
+    ********************
+    Short pin pin3->pin5
+    short pin pin4->pin6
+    *********************
 
 Connect a USB-micro cable to CN41 and power on the carrier, make sure it identifies correctly:
 
@@ -119,20 +119,20 @@ We can then run the flash tool with:
 
 Set SW5 to:
 
-SW5
-***************
-ON ON ON 
-***************
+    SW5
+    ***************
+    ON ON ON 
+    ***************
 
 Connect a serial adapter to SER3:
 
 Debug port (SER3):
-
-pin 1: NC
-pin 2: RX
-pin 3: TX
-pin 4: GND
-pin 5: NC
+    
+    pin 1: NC
+    pin 2: RX
+    pin 3: TX
+    pin 4: GND
+    pin 5: NC
 
 Power upp the board and it should boot into linux:
 
@@ -141,4 +141,158 @@ Power upp the board and it should boot into linux:
 The default user/password is : root/oelinux123
 
 
+ # Testing
+
+## Ethernet
+
+### eth0
  
+        root@qcs6490-rb3gen2-vision-kit:~# [ 3151.479753][    C1] tc956x_pci-eth 0001:05:00.0: tc956xmac_wol_interrupt
+        [ 3151.486841][ T2245] tc956x_pci-eth 0001:05:00.0: Entry: tc956xmac_defer_phy_isr_work
+        [ 3151.498757][ T2245] tc956x_pci-eth 0001:05:00.0: Exit: tc956xmac_defer_phy_isr_work
+        [ 3151.778584][    C1] tc956x_pci-eth 0001:05:00.0: tc956xmac_wol_interrupt
+        [ 3151.785665][ T2245] tc956x_pci-eth 0001:05:00.0: Entry: tc956xmac_defer_phy_isr_work
+        [ 3151.798739][ T2245] tc956x_pci-eth 0001:05:00.0: Exit: tc956xmac_defer_phy_isr_work
+        [ 3152.336068][    C1] tc956x_pci-eth 0001:05:00.0: tc956xmac_wol_interrupt
+        [ 3152.343153][ T2245] tc956x_pci-eth 0001:05:00.0: Entry: tc956xmac_defer_phy_isr_work
+        [ 3152.354201][ T2245] tc956x_pci-eth 0001:05:00.0: Exit: tc956xmac_defer_phy_isr_work
+        [ 3152.416500][    C1] tc956x_pci-eth 0001:05:00.0: tc956xmac_wol_interrupt
+        [ 3152.423570][ T2245] tc956x_pci-eth 0001:05:00.0: Entry: tc956xmac_defer_phy_isr_work
+        [ 3152.431960][ T2245] tc956x_pci-eth 0001:05:00.0: Exit: tc956xmac_defer_phy_isr_work
+        [ 3152.445913][ T2297] tc956x_pci-eth 0001:05:00.0: tc956xmac_mac_link_up priv->eee_enabled: 0 priv->eee_active: 0
+
+ Testing the speed:
+
+    root@qcs6490-rb3gen2-vision-kit:~# iperf3 -c 192.168.1.32 -t 10
+    Connecting to host 192.168.1.32, port 5201
+    [  5] local 192.168.1.232 port 52672 connected to 192.168.1.32 port 5201
+    [ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+    [  5]   0.00-1.00   sec   114 MBytes   957 Mbits/sec    0    365 KBytes       
+    [  5]   1.00-2.00   sec   112 MBytes   938 Mbits/sec    0    365 KBytes       
+    [  5]   2.00-3.00   sec   112 MBytes   940 Mbits/sec    0    365 KBytes       
+    [  5]   3.00-4.00   sec   112 MBytes   944 Mbits/sec    0    365 KBytes       
+    [  5]   4.00-5.00   sec   112 MBytes   942 Mbits/sec    0    365 KBytes       
+    [  5]   5.00-6.00   sec   112 MBytes   943 Mbits/sec    0    365 KBytes       
+    [  5]   6.00-7.00   sec   112 MBytes   937 Mbits/sec    0    365 KBytes       
+    [  5]   7.00-8.00   sec   112 MBytes   942 Mbits/sec    0    365 KBytes       
+    [  5]   8.00-9.00   sec   112 MBytes   942 Mbits/sec    0    365 KBytes       
+    [  5]   9.00-10.00  sec   112 MBytes   941 Mbits/sec    0    365 KBytes       
+    - - - - - - - - - - - - - - - - - - - - - - - - -
+    [ ID] Interval           Transfer     Bitrate         Retr
+    [  5]   0.00-10.00  sec  1.10 GBytes   942 Mbits/sec    0            sender
+    [  5]   0.00-10.00  sec  1.10 GBytes   941 Mbits/sec                  receiver
+    
+    iperf Done.
+ 
+### eth1
+
+Connecting ethernet cable:
+
+    [ 3307.603623][    C0] tc956x_pci-eth 0001:05:00.1: tc956xmac_wol_interrupt
+    [ 3307.610667][ T2299] tc956x_pci-eth 0001:05:00.1: Entry: tc956xmac_defer_phy_isr_work
+    [ 3307.624406][ T2299] tc956x_pci-eth 0001:05:00.1: Exit: tc956xmac_defer_phy_isr_work
+    [ 3307.949673][    C0] tc956x_pci-eth 0001:05:00.1: tc956xmac_wol_interrupt
+    [ 3307.956732][ T2299] tc956x_pci-eth 0001:05:00.1: Entry: tc956xmac_defer_phy_isr_work
+    [ 3307.970468][ T2299] tc956x_pci-eth 0001:05:00.1: Exit: tc956xmac_defer_phy_isr_work
+    [ 3308.495957][    C0] tc956x_pci-eth 0001:05:00.1: tc956xmac_wol_interrupt
+    [ 3308.502989][ T2299] tc956x_pci-eth 0001:05:00.1: Entry: tc956xmac_defer_phy_isr_work
+    [ 3308.516512][ T2299] tc956x_pci-eth 0001:05:00.1: Exit: tc956xmac_defer_phy_isr_work
+    [ 3308.556881][    C0] tc956x_pci-eth 0001:05:00.1: tc956xmac_wol_interrupt
+    [ 3308.563894][ T2299] tc956x_pci-eth 0001:05:00.1: Entry: tc956xmac_defer_phy_isr_work
+    [ 3308.576745][ T2299] tc956x_pci-eth 0001:05:00.1: Exit: tc956xmac_defer_phy_isr_work
+    [ 3308.589755][   T89] tc956x_pci-eth 0001:05:00.1: tc956xmac_mac_link_up priv->eee_enabled: 0 priv->eee_active: 0
+
+Testing speed with iperf3:
+
+    root@qcs6490-rb3gen2-vision-kit:~# iperf3 -c 192.168.1.32 -t 10
+    Connecting to host 192.168.1.32, port 5201
+    [  5] local 192.168.1.162 port 35096 connected to 192.168.1.32 port 5201
+    [ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+    [  5]   0.00-1.00   sec   114 MBytes   951 Mbits/sec    0    368 KBytes       
+    [  5]   1.00-2.00   sec   112 MBytes   940 Mbits/sec    0    368 KBytes       
+    [  5]   2.00-3.00   sec   112 MBytes   942 Mbits/sec    0    368 KBytes       
+    [  5]   3.00-4.00   sec   113 MBytes   948 Mbits/sec    0    368 KBytes       
+    [  5]   4.00-5.00   sec   112 MBytes   941 Mbits/sec    0    368 KBytes       
+    [  5]   5.00-6.00   sec   112 MBytes   939 Mbits/sec    0    368 KBytes       
+    [  5]   6.00-7.00   sec   112 MBytes   941 Mbits/sec    0    368 KBytes       
+    [  5]   7.00-8.00   sec   112 MBytes   944 Mbits/sec    0    393 KBytes       
+    [  5]   8.00-9.00   sec   112 MBytes   941 Mbits/sec    0    393 KBytes       
+    [  5]   9.00-10.00  sec   112 MBytes   940 Mbits/sec    0    393 KBytes       
+    - - - - - - - - - - - - - - - - - - - - - - - - -
+    [ ID] Interval           Transfer     Bitrate         Retr
+    [  5]   0.00-10.00  sec  1.10 GBytes   943 Mbits/sec    0            sender
+    [  5]   0.00-10.00  sec  1.10 GBytes   941 Mbits/sec                  receiver
+    
+    iperf Done.
+
+## USB
+
+### USB2.0 ports (CN8 on ECB-960T-A17)
+
+Connect USB-thum drive on upper port:
+
+    root@qcs6490-rb3gen2-vision-kit:~# dmesg | tail -n 10
+    [ 3619.158761] usb-storage 1-1.3:1.0: USB Mass Storage device detected
+    [ 3619.162580] scsi host1: usb-storage 1-1.3:1.0
+    [ 3620.176586] scsi 1:0:0:0: Direct-Access     VendorCo ProductCode      2.00 PQ: 0 ANSI: 4
+    [ 3620.181607] sd 1:0:0:0: [sdi] 61440000 512-byte logical blocks: (31.5 GB/29.3 GiB)
+    [ 3620.181846] sd 1:0:0:0: [sdi] Write Protect is off
+    [ 3620.181857] sd 1:0:0:0: [sdi] Mode Sense: 03 00 00 00
+    [ 3620.182075] sd 1:0:0:0: [sdi] No Caching mode page found
+    [ 3620.182085] sd 1:0:0:0: [sdi] Assuming drive cache: write through
+    [ 3620.203797]  sdi: sdi1 sdi2
+    [ 3620.205472] sd 1:0:0:0: [sdi] Attached SCSI removable disk
+    root@qcs6490-rb3gen2-vision-kit:~# sudo mount /dev/sdi2 /mnt
+    -sh: sudo: command not found
+    root@qcs6490-rb3gen2-vision-kit:~# mount /dev/sdi2 /mnt
+    root@qcs6490-rb3gen2-vision-kit:~# echo "test" > /mnt/test.txt
+    root@qcs6490-rb3gen2-vision-kit:~# umount /mnt
+
+Connect USB-thumb drive on lower port:
+
+    root@qcs6490-rb3gen2-vision-kit:~# dmesg | tail -n 10
+    [ 3805.017727] usb-storage 1-1.1:1.0: USB Mass Storage device detected
+    [ 3805.023961] scsi host1: usb-storage 1-1.1:1.0
+    [ 3806.038146] scsi 1:0:0:0: Direct-Access     VendorCo ProductCode      2.00 PQ: 0 ANSI: 4
+    [ 3806.047319] sd 1:0:0:0: [sdi] 61440000 512-byte logical blocks: (31.5 GB/29.3 GiB)
+    [ 3806.047633] sd 1:0:0:0: [sdi] Write Protect is off
+    [ 3806.047643] sd 1:0:0:0: [sdi] Mode Sense: 03 00 00 00
+    [ 3806.047906] sd 1:0:0:0: [sdi] No Caching mode page found
+    [ 3806.047915] sd 1:0:0:0: [sdi] Assuming drive cache: write through
+    [ 3806.069308]  sdi: sdi1 sdi2
+    [ 3806.071016] sd 1:0:0:0: [sdi] Attached SCSI removable disk
+    root@qcs6490-rb3gen2-vision-kit:~# mount /dev/sdi2 /mnt
+    root@qcs6490-rb3gen2-vision-kit:~# cat /mnt/test.txt 
+    test
+    root@qcs6490-rb3gen2-vision-kit:~# umount /mnt
+
+### USB2.0 ports (CN9 on ECB-960T-A17)
+
+Connect USB-drive on lower port (upper port not supported):
+
+    root@qcs6490-rb3gen2-vision-kit:~# dmesg | tail -n 10
+    [ 3966.812607] usb-storage 1-1.4:1.0: USB Mass Storage device detected
+    [ 3966.820389] scsi host1: usb-storage 1-1.4:1.0
+    [ 3967.836130] scsi 1:0:0:0: Direct-Access     VendorCo ProductCode      2.00 PQ: 0 ANSI: 4
+    [ 3967.845825] sd 1:0:0:0: [sdi] 61440000 512-byte logical blocks: (31.5 GB/29.3 GiB)
+    [ 3967.846071] sd 1:0:0:0: [sdi] Write Protect is off
+    [ 3967.846082] sd 1:0:0:0: [sdi] Mode Sense: 03 00 00 00
+    [ 3967.846313] sd 1:0:0:0: [sdi] No Caching mode page found
+    [ 3967.846323] sd 1:0:0:0: [sdi] Assuming drive cache: write through
+    [ 3967.866122]  sdi: sdi1 sdi2
+    [ 3967.868471] sd 1:0:0:0: [sdi] Attached SCSI removable disk
+
+### USB2.0 port (CN16 on ECB-960T-A17)
+
+    root@qcs6490-rb3gen2-vision-kit:~# dmesg | tail -n 10
+    [ 4114.265789] usb-storage 1-1.2:1.0: USB Mass Storage device detected
+    [ 4114.271897] scsi host1: usb-storage 1-1.2:1.0
+    [ 4115.293107] scsi 1:0:0:0: Direct-Access     VendorCo ProductCode      2.00 PQ: 0 ANSI: 4
+    [ 4115.298051] sd 1:0:0:0: [sdi] 61440000 512-byte logical blocks: (31.5 GB/29.3 GiB)
+    [ 4115.298371] sd 1:0:0:0: [sdi] Write Protect is off
+    [ 4115.298382] sd 1:0:0:0: [sdi] Mode Sense: 03 00 00 00
+    [ 4115.298604] sd 1:0:0:0: [sdi] No Caching mode page found
+    [ 4115.298653] sd 1:0:0:0: [sdi] Assuming drive cache: write through
+    [ 4115.318966]  sdi: sdi1 sdi2
+    [ 4115.320137] sd 1:0:0:0: [sdi] Attached SCSI removable disk
+

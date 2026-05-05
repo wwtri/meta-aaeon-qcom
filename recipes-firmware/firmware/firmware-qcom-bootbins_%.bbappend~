@@ -1,8 +1,0 @@
-FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
-
-SRC_URI += "file://devcfg.mbn"
-
-#do_install:append() {
-#
-#    install -m 0644 ${WORKDIR}/devcfg.mbn ${D}/devcfg.mbn
-#}

@@ -18,7 +18,7 @@ This layer has only been tested with Qualcoms SDK for qcom6490 version 1.6:
     repo sync
 Since this test layer has only been tested with Qualcoms SDK we need to manually enter our layer:
      
-    git clone https://github.com/wwtri/meta-aaeon-qcom.git layers/
+    git clone https://github.com/wwtri/meta-aaeon-qcom.git layers/meta-aaeon-qcom
 
 We can then setup the environment using the setup-environment script:
 

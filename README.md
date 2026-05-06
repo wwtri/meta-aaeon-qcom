@@ -229,7 +229,7 @@ Testing speed with iperf3:
 
 ### USB2.0 ports (CN8 on ECB-960T-A17)
 
-Connect USB-thum drive on upper port:
+Connect USB drive on upper port:
 
     root@qcs6490-rb3gen2-vision-kit:~# dmesg | tail -n 10
     [ 3619.158761] usb-storage 1-1.3:1.0: USB Mass Storage device detected
@@ -248,7 +248,7 @@ Connect USB-thum drive on upper port:
     root@qcs6490-rb3gen2-vision-kit:~# echo "test" > /mnt/test.txt
     root@qcs6490-rb3gen2-vision-kit:~# umount /mnt
 
-Connect USB-thumb drive on lower port:
+Connect USB drive on lower port:
 
     root@qcs6490-rb3gen2-vision-kit:~# dmesg | tail -n 10
     [ 3805.017727] usb-storage 1-1.1:1.0: USB Mass Storage device detected
@@ -268,7 +268,7 @@ Connect USB-thumb drive on lower port:
 
 ### USB2.0 ports (CN9 on ECB-960T-A17)
 
-Connect USB-drive on lower port (upper port not supported):
+Connect USB drive on lower port (upper port not supported):
 
     root@qcs6490-rb3gen2-vision-kit:~# dmesg | tail -n 10
     [ 3966.812607] usb-storage 1-1.4:1.0: USB Mass Storage device detected
@@ -296,3 +296,36 @@ Connect USB-drive on lower port (upper port not supported):
     [ 4115.318966]  sdi: sdi1 sdi2
     [ 4115.320137] sd 1:0:0:0: [sdi] Attached SCSI removable disk
 
+## Display
+
+### Display Port (DP0 lane0 on ECB-960T-A17)
+
+Display works on boot and we can check the init_display.service to verify it runs correctly:
+
+
+    root@qcs6490-rb3gen2-vision-kit:~# systemctl status init_display.service
+    * init_display.service - Init-display Service
+         Loaded: loaded (/etc/initscripts/init_qti_display; enabled; preset: disabled)
+         Active: active (exited) since Thu 2025-05-29 18:48:29 UTC; 6min ago
+        Process: 628 ExecStartPre=/bin/mkdir -p /dev/socket/weston (code=exited, status=0/SUCCESS)
+        Process: 877 ExecStartPre=/bin/sh -c if selinuxenabled && command -v restorecon >/dev/null 2>&1; then /sbin/restorecon -F /dev/socket/weston; fi (code=exited, status=0/SUCCESS)
+        Process: 912 ExecStartPre=/bin/chown root:root /dev/socket/weston (code=exited, status=0/SUCCESS)
+        Process: 921 ExecStartPre=/bin/chmod 0700 /dev/socket/weston (code=exited, status=0/SUCCESS)
+        Process: 930 ExecStartPre=/bin/modetest -c (code=exited, status=0/SUCCESS)
+        Process: 951 ExecStartPre=/bin/sleep 2 (code=exited, status=0/SUCCESS)
+        Process: 1299 ExecStartPre=/bin/mkdir -p /dev/dri (code=exited, status=0/SUCCESS)
+        Process: 1302 ExecStartPre=/bin/chmod 0755 /dev/dri (code=exited, status=0/SUCCESS)
+        Process: 1304 ExecStart=/etc/initscripts/init_qti_display start (code=exited, status=0/SUCCESS)
+       Main PID: 1304 (code=exited, status=0/SUCCESS)
+          Tasks: 12 (limit: 18183)
+         Memory: 135.8M (peak: 144.0M)
+            CPU: 12.947s
+         CGroup: /system.slice/init_display.service
+                 |-1313 weston --backend=drm-backend.so --renderer=pixman --idle-time=0 --continue-without-input
+                 |-1316 weston --backend=drm-backend.so --renderer=pixman --idle-time=0 --continue-without-input
+                 |-1318 /usr/libexec/weston-keyboard
+                 |-1319 /usr/libexec/weston-desktop-shell
+                 |-2110 /bin/bash /usr/bin/Qdemo
+                 |-2111 python3 /usr/bin/gst-gui-launcher-app.py
+                 |-2126 /usr/bin/weston-terminal
+                 `-2127 /bin/bash
